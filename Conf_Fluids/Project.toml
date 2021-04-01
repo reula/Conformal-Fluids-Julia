@@ -1,0 +1,9 @@
+name = "Conf_Fluids"
+uuid = "feb31b11-51b6-4ad0-9397-763fe3e405b7"
+authors = ["reula "]
+version = "0.1.0"
+
+[deps]
+StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
+SymbolicUtils = "d1185830-fcd6-423d-90d6-eec64667417b"
+Symbolics = "0c5d862f-8b57-4792-8d23-62f2024744c7"
