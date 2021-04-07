@@ -16,7 +16,8 @@ Flu = [5.921317694643806; 6.02302807825841; 3.713391378258412;  4.13673546707863
 Flux(flu,χ) - Flu # should vanish
 ```
 """
-function Flux(flu,χ)
+function Flux(con,χ)
+    c_to_f(flu,con,χ)
     μ = -flu[1]  # esto es -μ
     #μ = view(flu,1)
     T = (μ)^(-1//2) # use μ positive, so I changed μ -> -μ
@@ -73,4 +74,12 @@ function Is!(flu,Is,par)
     Is[4] = -2//5*γ*v*T*x1/λ - γ*(v^2+1)*x2/T/κ - v*T*x3/(γ*λ)
     Is[5] = -2//5*(γ^2*v^2+1//4)*T*x1/λ/γ - 2γ*v*x2/T/κ - T*x3/(γ*λ)
     return Is
+end
+
+
+function Speed_max(flu, par_eq)
+    #  Here we compute the maximal propagation speed of the equation, for the cases of real eigenvalues is the spectral radious of the 
+    #  Jacobian (when the roots have imaginary values I guess it is the maximal real part of the eigenvalues).
+    χ = par_eq
+    return 1. #para revisar....
 end
