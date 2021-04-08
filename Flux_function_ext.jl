@@ -1,23 +1,30 @@
 """
-    Flux!(flu, con, p)
+    Flux(con, p)
 
-Given the fluid variables `flu` computes the corresponding fluxes.
+Given the fluid variables `flu` and `con` computes the corresponding fluxes.
+The value of `con` is used to approximate the next value of it when computed from `flu`. 
 
 As parameters (p) have: 
+    p = (flu, χ)
     χ = Function parameters
+    con = value of `con` is used to approximate the next value of it when computed from `flu`.
 
 # Examples
 ```julia-repl
 julia> 
 χ = [- 1.; - 2.; - 10.]
+con = zeros(N)
 flu = [- 5.; 0.5; 2.1; 0.5; 5.1]
 Flu = [5.921317694643806; 6.02302807825841; 3.713391378258412;  4.136735467078638; 3.444079555898864]
 
 Flux(flu,χ) - Flu # should vanish
 ```
 """
-function Flux(con,χ)
-    c_to_f(flu,con,χ)
+function Flux(u, p)
+    χ = p
+    c_to_f(u,χ)    
+    #con = view[1:5]
+    flu = view[6:end]
     μ = -flu[1]  # esto es -μ
     #μ = view(flu,1)
     T = (μ)^(-1//2) # use μ positive, so I changed μ -> -μ
@@ -58,8 +65,10 @@ I_c = [- 0.09488575328013785; - 0.12155655385334033; - 0.12140081195218293]
 Is!(flu,Is,par) - I_c # should be very small
 ```
 """
-function Is!(flu,Is,par)
+function Is!(u,Is,par)
     λ, κ = par
+    #con = view[1:5]
+    flu = view[6:end]
     μ = -flu[1]  # esto es -μ
     #μ = view(flu,1)
     T = (μ)^(-1//2) # use μ positive, so I changed μ -> -μ
@@ -77,7 +86,7 @@ function Is!(flu,Is,par)
 end
 
 
-function Speed_max(flu, par_eq)
+function Speed_max(u, par_eq)
     #  Here we compute the maximal propagation speed of the equation, for the cases of real eigenvalues is the spectral radious of the 
     #  Jacobian (when the roots have imaginary values I guess it is the maximal real part of the eigenvalues).
     χ = par_eq
