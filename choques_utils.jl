@@ -67,7 +67,8 @@ function MP5(F0::AbstractFloat, F1::AbstractFloat, F2::AbstractFloat, F3::Abstra
 end
 
 function mp5(du::Array{Float64,1}, u::Array{Float64,1}, par, j) # j is the grid position
-    par_eq, h_1, U, N, Fx, Speed_max = par 
+   
+    h_1, U, N, par_flux, par_source, Fx, Speed_max, Source = par
     
     v = reshape(u,(N,U))
     dv = reshape(du,(N,U))
@@ -87,24 +88,24 @@ function mp5(du::Array{Float64,1}, u::Array{Float64,1}, par, j) # j is the grid 
     u_l_p3 = v[mod1((j+3), N),:]
     u_l_m3 = v[mod1((j + N -3), N),:]
     
-    S_MAX = maximum([Speed_max(u_l_p3, par_eq), Speed_max(u_l_m3, par_eq), 
-            Speed_max(u_l_p2, par_eq), Speed_max(u_l_m2, par_eq), Speed_max(u_l_p, par_eq), 
-            Speed_max(u_l_m, par_eq), Speed_max(u_l, par_eq)])
+    S_MAX = maximum([Speed_max(u_l_p3, par_flux), Speed_max(u_l_m3, par_flux), 
+            Speed_max(u_l_p2, par_flux), Speed_max(u_l_m2, par_flux), Speed_max(u_l_p, par_flux), 
+            Speed_max(u_l_m, par_flux), Speed_max(u_l, par_flux)])
     
-    F_Pp3 = 0.5 * (Fx(u_l_p3, par_eq) + S_MAX * u_l_p3)
-    F_Mp3 = 0.5 * (Fx(u_l_p3, par_eq) - S_MAX * u_l_p3)
-    F_Pp2 = 0.5 * (Fx(u_l_p2, par_eq) + S_MAX * u_l_p2)
-    F_Mp2 = 0.5 * (Fx(u_l_p2, par_eq) - S_MAX * u_l_p2)
-    F_Pp  = 0.5 * (Fx(u_l_p,  par_eq) + S_MAX * u_l_p)
-    F_Mp  = 0.5 * (Fx(u_l_p,  par_eq) - S_MAX * u_l_p)
-    F_P   = 0.5 * (Fx(u_l,    par_eq) + S_MAX * u_l)
-    F_M   = 0.5 * (Fx(u_l,    par_eq) - S_MAX * u_l)
-    F_Pm  = 0.5 * (Fx(u_l_m,  par_eq) + S_MAX * u_l_m)
-    F_Mm  = 0.5 * (Fx(u_l_m,  par_eq) - S_MAX * u_l_m)
-    F_Pm2 = 0.5 * (Fx(u_l_m2, par_eq) + S_MAX * u_l_m2)
-    F_Mm2 = 0.5 * (Fx(u_l_m2, par_eq) - S_MAX * u_l_m2)
-    F_Pm3 = 0.5 * (Fx(u_l_m3, par_eq) + S_MAX * u_l_m3)
-    F_Mm3 = 0.5 * (Fx(u_l_m3, par_eq) - S_MAX * u_l_m3)
+    F_Pp3 = 0.5 * (Fx(u_l_p3, par_flux) + S_MAX * u_l_p3)
+    F_Mp3 = 0.5 * (Fx(u_l_p3, par_flux) - S_MAX * u_l_p3)
+    F_Pp2 = 0.5 * (Fx(u_l_p2, par_flux) + S_MAX * u_l_p2)
+    F_Mp2 = 0.5 * (Fx(u_l_p2, par_flux) - S_MAX * u_l_p2)
+    F_Pp  = 0.5 * (Fx(u_l_p,  par_flux) + S_MAX * u_l_p)
+    F_Mp  = 0.5 * (Fx(u_l_p,  par_flux) - S_MAX * u_l_p)
+    F_P   = 0.5 * (Fx(u_l,    par_flux) + S_MAX * u_l)
+    F_M   = 0.5 * (Fx(u_l,    par_flux) - S_MAX * u_l)
+    F_Pm  = 0.5 * (Fx(u_l_m,  par_flux) + S_MAX * u_l_m)
+    F_Mm  = 0.5 * (Fx(u_l_m,  par_flux) - S_MAX * u_l_m)
+    F_Pm2 = 0.5 * (Fx(u_l_m2, par_flux) + S_MAX * u_l_m2)
+    F_Mm2 = 0.5 * (Fx(u_l_m2, par_flux) - S_MAX * u_l_m2)
+    F_Pm3 = 0.5 * (Fx(u_l_m3, par_flux) + S_MAX * u_l_m3)
+    F_Mm3 = 0.5 * (Fx(u_l_m3, par_flux) - S_MAX * u_l_m3)
     
     for i in 1:U
         F_RM[i] = MP5(F_Mp2[i], F_Mp[i],  F_M[i],  F_Mm[i], F_Mm2[i])
@@ -123,7 +124,7 @@ end
 
 
 function kt(du::Array{Float64,1}, u::Array{Float64,1}, par, j) # j is the grid position
-    par_eq, h_1, U, N, Fx, Speed_max = par 
+    par_flux, h_1, U, N, Fx, Speed_max = par 
     theta = 1.5
     v = reshape(u,(N,U))
     dv = reshape(du,(N,U))
@@ -154,11 +155,11 @@ function kt(du::Array{Float64,1}, u::Array{Float64,1}, par, j) # j is the grid p
     u_mp = u_l   - 0.5 * v_x / h_1
     u_mm = u_l_m + 0.5 * v_xm / h_1
     
-    a_p = maximum([Speed_max(u_pp, par_eq), Speed_max(u_pm, par_eq)])
-    a_m = maximum([Speed_max(u_mm, par_eq), Speed_max(u_mp, par_eq)])
+    a_p = maximum([Speed_max(u_pp, par_flux), Speed_max(u_pm, par_flux)])
+    a_m = maximum([Speed_max(u_mm, par_flux), Speed_max(u_mp, par_flux)])
         
-    H_p = 0.5 * (Fx(u_pp, par_eq) + Fx(u_pm, par_eq)) - 0.5 * a_p * (u_pp - u_pm)
-    H_m = 0.5 * (Fx(u_mm, par_eq) + Fx(u_mp, par_eq)) - 0.5 * a_m * (u_mp - u_mm)
+    H_p = 0.5 * (Fx(u_pp, par_flux) + Fx(u_pm, par_flux)) - 0.5 * a_p * (u_pp - u_pm)
+    H_m = 0.5 * (Fx(u_mm, par_flux) + Fx(u_mp, par_flux)) - 0.5 * a_m * (u_mp - u_mm)
 
     return du[j,:]  = - h_1 * (H_p[:]-H_m[:])
 end

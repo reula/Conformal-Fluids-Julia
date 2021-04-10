@@ -51,7 +51,7 @@ function NR_step!(F, Jac, u0, y, p)
 end
 
 """
-    c_to_f!(flu, con, p)
+    c_to_f!(u, p)
 
 Compute the fluid variables `flu` from the conservative `con` ones.
 It inverts the function `F(flu,con,χ) = con(flu,χ) - con` using 
@@ -105,7 +105,7 @@ con0[1,:] = [0.1366314976448222, 0.07009306769467444, 0.06115332989597844, 0.071
 ```
 """
 function c_to_f!(u, p)
-    χ, tol, iter_max, N, M = p
+    χ, tol, iter_max, N, M = p 
     #reshape(u,(N,U))
     con = view(reshape(u,(M,N)),:,1:N÷2)
     flu = view(reshape(u,(M,N)),:,N÷2+1:N)
