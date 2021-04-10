@@ -87,9 +87,9 @@ function Is!(u,Is,par)
 end
 
 
-function Speed_max(u, par_eq)
+function Speed_max(u, par_flux)
     #  Here we compute the maximal propagation speed of the equation, for the cases of real eigenvalues is the spectral radious of the 
     #  Jacobian (when the roots have imaginary values I guess it is the maximal real part of the eigenvalues).
-    χ = par_eq
-    return 1. #para revisar....
+    χ = par_flux
+    return 1. #para revisar.... debiera ser una función de varias cosas... 
 end
