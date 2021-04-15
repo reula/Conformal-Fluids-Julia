@@ -184,3 +184,24 @@ function f_to_c!(u, p)
     return u[:]
 end
 
+function c_to_f_direct!(u,p)
+    χ, N, M = p
+    c = view(reshape(u,(M,N)),:,1:N÷2)
+    f = view(reshape(u,(M,N)),:,N÷2+1:N)
+    
+    for j ∈ 1:M
+    
+        e = c[j,1] # 4//3* ρ*(γ^2 - 1//4)
+        s = c[j,2] # 4//3* ρ*γ^2*v
+        x = s/e
+        v = 3//2 * x / (1 + sqrt(1 - 3//4 * x^2))
+        γ = (1 - v^2)^(-1//2)
+        #e = 4//3* ρ*(γ^2 - 1/4)
+        #ρ = -6 / μ^2
+        ρ = 3//4 * e / (γ^2 - 1//4)
+        μ = -sqrt(6/ρ)
+        f[j,1] = μ    # esto es -μ
+        f[j,2] = v
+    end
+    return u[:]
+end
