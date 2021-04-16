@@ -66,13 +66,16 @@ I_c = [- 0.09488575328013785; - 0.12155655385334033; - 0.12140081195218293]
 Is!(flu,Is,par) - I_c # should be very small
 ```
 """
-function Is!(u,Is,par)
-    λ, κ = par
-    #con = view[1:5]
+function Is(u,par)
+    Is = zeros(10)
     flu = u[6:end]
-    μ = -flu[1]  # esto es -μ
-    #μ = view(flu,1)
-    T = (μ)^(-1//2) # use μ positive, so I changed μ -> -μ
+    μ = -flu[1]
+    χ = par
+    χ₀= χ[1]
+    χ₁= -χ[2]
+    κ = -χ₀*μ^5/(15π*χ₁^2)
+    λ = -χ₀*μ^4/(π*χ₁^2)
+    T = (abs(μ))^(-1//2) # use μ positive, so I changed μ -> -μ
     v = flu[2]
     x1 = flu[3]
     x2 = flu[4]
@@ -83,9 +86,13 @@ function Is!(u,Is,par)
     Is[3] = -2//5*(γ^2-1//4)*T*x1/(γ*λ) - 2γ*v*x2/T/κ - v^2*T*x3/(γ*λ)
     Is[4] = -2//5*γ*v*T*x1/λ - γ*(v^2+1)*x2/T/κ - v*T*x3/(γ*λ)
     Is[5] = -2//5*(γ^2*v^2+1//4)*T*x1/λ/γ - 2γ*v*x2/T/κ - T*x3/(γ*λ)
-    return Is
+    return Is[:]
 end
 
+function Is_dummy(u,par)
+    Is = zeros(10)
+    return Is[:]
+end
 
 function Speed_max(u, par_flux)
     #  Here we compute the maximal propagation speed of the equation, for the cases of real eigenvalues is the spectral radious of the 

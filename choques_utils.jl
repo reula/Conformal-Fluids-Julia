@@ -116,7 +116,7 @@ function mp5(du::Array{Float64,1}, u::Array{Float64,1}, par, j) # j is the grid 
         H_p[i] = F_LP[i] + F_RP[i]
         H_m[i] = F_LM[i] + F_RM[i]
 
-        dv[j,i] = - h_1 * (H_p[i]-H_m[i])
+        dv[j,i] = - h_1 * (H_p[i]-H_m[i]) + Source(u,par_source)[i]
     end
     return du[j,:]
 end
