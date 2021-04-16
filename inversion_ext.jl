@@ -107,6 +107,7 @@ con0[1,:] = [0.1366314976448222, 0.07009306769467444, 0.06115332989597844, 0.071
 function c_to_f!(u, p)
     χ, tol, iter_max, N, M = p 
     #reshape(u,(N,U))
+    tol = tol^2
     con = view(reshape(u,(M,N)),:,1:N÷2)
     flu = view(reshape(u,(M,N)),:,N÷2+1:N)
     for j ∈ 1:M
@@ -204,4 +205,28 @@ function c_to_f_direct!(u,p)
         f[j,2] = v
     end
     return u[:]
+end
+
+"""
+    split_u!(u,c,f,N,M) NO FUNCIONA!
+
+split in two matrices the vector u according to the sizes given.
+This is a view, not a copy!
+
+    N = number of variables (5x2 here), 
+    M = dimension of vector of variables
+
+# Examples
+```julia-repl
+julia> 
+N=10
+M=1
+
+u = zeros(N*M)
+
+```
+"""
+function split_u!(u,c,f,N,M)
+    c = view(reshape(u,(M,N)),:,1:N÷2)
+    f = view(reshape(u,(M,N)),:,N÷2+1:N)
 end
