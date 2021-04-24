@@ -1,6 +1,6 @@
 import Pkg; 
-Pkg.activate("Conf_Fluids")
-Pkg.add("Symbolics")
+#Pkg.activate("Conf_Fluids")
+#Pkg.add("Symbolics")
 using Symbolics
 using StaticArrays
 

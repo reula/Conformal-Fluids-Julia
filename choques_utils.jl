@@ -66,7 +66,7 @@ function MP5(F0::AbstractFloat, F1::AbstractFloat, F2::AbstractFloat, F3::Abstra
     end
 end
 
-function mp5(du::Array{Float64,1}, u::Array{Float64,1}, par, j) # j is the grid position
+function mp5(du::Array{Float64,1}, u::Array{Float64,1}, par, j, t) # j is the grid position
    
     h_1, U, N, par_flux, par_source, Fx, Speed_max, Source = par
     
@@ -116,7 +116,7 @@ function mp5(du::Array{Float64,1}, u::Array{Float64,1}, par, j) # j is the grid 
         H_p[i] = F_LP[i] + F_RP[i]
         H_m[i] = F_LM[i] + F_RM[i]
 
-        dv[j,i] = - h_1 * (H_p[i]-H_m[i]) + Source(u,par_source)[i]
+        dv[j,i] = - h_1 * (H_p[i]-H_m[i]) + Source(u,t,par_source)[i]
     end
     return du[j,:]
 end
@@ -161,6 +161,6 @@ function kt(du::Array{Float64,1}, u::Array{Float64,1}, par, j) # j is the grid p
     H_p = 0.5 * (Fx(u_pp, par_flux) + Fx(u_pm, par_flux)) - 0.5 * a_p * (u_pp - u_pm)
     H_m = 0.5 * (Fx(u_mm, par_flux) + Fx(u_mp, par_flux)) - 0.5 * a_m * (u_mp - u_mm)
 
-    return du[j,:]  = - h_1 * (H_p[:]-H_m[:])
+    return du[j,:]  = - h_1 * (H_p[:]-H_m[:]) + Source(u,t,par_source)[i]
 end
 #mp5(u,du,par,2)
