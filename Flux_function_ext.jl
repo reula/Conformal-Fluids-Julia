@@ -106,11 +106,9 @@ Is!(flu,Is,par) - I_c # should be very small
 ```
 """
 function Is(u,t,par)
-    χ, ζ = par #only used to test otherwise are defined below. a is and amplitude to change I from outside
-    #κ = ζ[1] # not used
-    #λ = ζ[2] # not used
-    a = ζ[3] 
+    χ, a = par #only used to test otherwise are defined below. a is and amplitude to change I from outside
     Is = zeros(10)
+    a = -1.
     flu = u[6:end]
     μ = flu[1] 
     χ₀= χ[1]
