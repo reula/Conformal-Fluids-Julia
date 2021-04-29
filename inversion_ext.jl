@@ -1,4 +1,4 @@
-import Pkg; 
+#import Pkg; 
 #Pkg.activate("Conf_Fluids")
 #Pkg.add("Symbolics")
 using Symbolics
@@ -7,7 +7,7 @@ using StaticArrays
 function F(flu,con,χ)    
     μ = flu[1]  # esto es -μ
     #μ = view(flu,1)
-    T = (μ)^(-1//2) # use μ positive, so I changed μ -> -μ
+    T = (abs(μ))^(-1/2) # use μ positive, so I changed μ -> -μ
     v = flu[2]
     x1 = flu[3]
     x2 = flu[4]
@@ -17,9 +17,9 @@ function F(flu,con,χ)
     χ₂ = χ[3]
     
     γ = (1 - v^2)^(-1//2)
-    τ = -2χ₁ * x3 * T / (γ*μ^3) - 24χ₂*(1//2*(1-v^2)x3^2 + 14//3 * x2^2 + 7/5*(1-v^2)x1*x3)/μ^5
-    ρ = -6χ₀ / μ^2 - 6χ₁*x1/(γ * μ^4 * T) - 42χ₂*(6//5 *x1^2 + 10γ^2*x2^2 + 3//2*(v^2-1)^2*x3^2)/(μ^5 * γ^2)
-    Q = -10χ₀ * x2 * T / μ^3 - 168χ₂ * x2 * (x1 - (v^2 - 1)x3)/(γ * μ^5)
+    τ = 2χ₁ * x3 * T / (γ*μ^3) + 24χ₂*(1//2*(1-v^2)x3^2 + 14//3 * x2^2 + 7/5*(1-v^2)x1*x3)/μ^5
+    ρ = -6χ₀ / μ^2 - 6χ₁*x1/(γ * μ^4 * T) + 42χ₂*(6//5 *x1^2 + 10γ^2*x2^2 + 3//2*(v^2-1)^2*x3^2)/(μ^5 * γ^2)
+    Q = 10χ₀ * x2 * T / μ^3 + 168χ₂ * x2 * (x1 - (v^2 - 1)x3)/(γ * μ^5)
 
     A = (-12 * χ₂/μ^4)*[3(2γ^2 - 1)  3v*(6γ^2 - 1)    3v^2 ;
                 v*(6γ^2 - 1)  (6γ^2*(1 + 2v^2) - 1)  v*(v^2 + 2) ;
@@ -28,9 +28,9 @@ function F(flu,con,χ)
     e = 4//3*ρ*(γ^2 - 1//4) + 2v*γ*Q + v^2*τ
     s = 4//3*ρ*γ^2*v + (v^2+1//1)γ*Q + v*τ;
 
-    Y1 = -3χ₁*γ/T/μ^3 *(2γ^2 - 1//1)
-    Y2 = -3χ₁*γ/T/μ^3 *v*(6γ^2 - 1//1)
-    Y3 = -3χ₁*γ/T/μ^3 *(6γ^2*v^2 + 1//1)
+    Y1 = 3χ₁*γ/T/μ^3 *(2γ^2 - 1//1)
+    Y2 = 3χ₁*γ/T/μ^3 *v*(6γ^2 - 1//1)
+    Y3 = 3χ₁*γ/T/μ^3 *(6γ^2*v^2 + 1//1)
     
     return  [- con[1] + 4//3* ρ*(γ^2 - 1//4) + 2//1* Q*γ*v + τ*v^2;
              - con[2] + 4//3* ρ*γ^2*v + Q*γ*(v^2 + 1//1) + τ*v;
@@ -111,7 +111,7 @@ function c_to_f!(u, p)
     con = view(reshape(u,(M,N)),:,1:N÷2)
     flu = view(reshape(u,(M,N)),:,N÷2+1:N)
     for j ∈ 1:M
-        flu[j,1] = -flu[j,1]
+        #flu[j,1] = -flu[j,1]
         iter = 1
         while F(flu[j,:],con[j,:], χ)'*F(flu[j,:],con[j,:], χ) > tol && iter < iter_max
             flu[j,:] = NR_step!(F, Jac, flu[j,:], con[j,:], χ)
@@ -121,7 +121,7 @@ function c_to_f!(u, p)
             end
         end
     #println(iter)
-        flu[j,1] = -flu[j,1]
+        #flu[j,1] = -flu[j,1]
     end
     return u[:]
 end
@@ -178,9 +178,9 @@ function f_to_c!(u, p)
     flu = view(reshape(u,(M,N)),:,N÷2+1:N)
     y = zeros(N÷2)
     for j ∈ 1:M
-        flu[j,1] = -flu[j,1]
+        #flu[j,1] = -flu[j,1]
         con[j,:] = F(flu[j,:],y, χ)
-        flu[j,1] = -flu[j,1]
+        #flu[j,1] = -flu[j,1]
     end
     return u[:]
 end
