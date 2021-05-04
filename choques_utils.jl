@@ -1,13 +1,21 @@
-function mysign_zero(a::AbstractFloat)
-    if (a > 0.) 
-        return 1.0
-	elseif (a < 0.) 
-        return -1.0
-	else 
-        return 0.0
-    end
+@inline function mysign_zero(a)
+    return (1.0.*(a .> 0.0) + (-1.0).* (a .< 0.0))
 end
-#mysign_zero(-0.)
+
+@inline function minmod(a, b)
+    return 0.5*(mysign_zero(a)+mysign_zero(b))*min(abs(a), abs(b))
+end
+
+@inline function minmod(a, b, c)
+    sgnbc = (mysign_zero(b)+mysign_zero(c)) #this is 2 if both are positive, -2 if both are negative, 0 otherwise
+    sgnac = (mysign_zero(a)+mysign_zero(c)) #this is 2 if both are positive, -2 if both are negative, 0 otherwise
+    
+    return 0.25*sgnbc*abs(sgnac)*min(abs(a), abs(b),abs(c))
+end
+
+@inline function minmod(a,b,c,d)
+    return 0.125*(mysign_zero(a)+mysign_zero(b))*(abs((mysign_zero(a)+mysign_zero(c))*(mysign_zero(a)+mysign_zero(d))))*min(abs(a),abs(b),abs(c), abs(d))
+end
 
 function MM3(a::AbstractFloat, b::AbstractFloat, c::AbstractFloat, weight::AbstractFloat) #(2*D0,Dp,Dm)
     
@@ -164,3 +172,149 @@ function kt(du::Array{Float64,1}, u::Array{Float64,1}, par, j) # j is the grid p
     return du[j,:]  = - h_1 * (H_p[:]-H_m[:]) + Source(u,t,par_source)[i]
 end
 #mp5(u,du,par,2)
+
+
+#MP5 Reconstruction
+function MP5reconstruction(Vjmm, Vjm, Vj, Vjp, Vjpp)
+    B1 = 0.0166666666666666667  #1/60
+    B2 = 1.3333333333333333333  #4/3
+    eps = 1e-10
+    ALPHA = 4.0
+    #=Vjmm = V[1]
+    Vjm = V[2]
+    Vj = V[3]
+    Vjp = V[4]
+    Vjpp = V[5]=#
+    Vor = B1*(2.0*Vjmm - 13.0*Vjm + 47.0*Vj + 27*Vjp - 3.0*Vjpp) #=This is the original interpolation.
+                                                                   All that follows is the application of 
+                                                                   limiters to treat shocks=#
+    Vmp = Vj + minmod(Vjp-Vj, ALPHA*(Vj-Vjm))  #mp = monotonicity preserving. It's the median between v_j, v_(j+1)
+                                              #and an upper limit v^UL = v_j+ALPHA(v_j-v_(j-1))
+    if ((Vor-Vj)*(Vor-Vmp)) < eps             #this condition is equivalent to asking vl in [vj, v^{MP}]
+        Vl = Vor #vl = v^{L}_{j+1/2}
+    else
+        djm1 = Vjmm - 2.0*Vjm + Vj
+        dj = Vjm - 2*Vj + Vjp
+        djp1 = Vj - 2.0*Vjp + Vjpp
+        dm4jph = minmod(4*dj - djp1, 4*djp1-dj, dj, djp1)  #ph = plus half (+1/2)
+        dm4jmh = minmod(4*dj - djm1, 4*djm1-dj, dj, djm1)  #mh = minus half (-1/2)
+        #d^{M4}_{j+1/2} = \minmod(4d_{j}-d_{j+1},4d_{j+1}-d_{j}, d_{j}, d_{j+1})
+        Vul = Vj + ALPHA*(Vj - Vjm)   #upper limit
+        Vav = 0.5*(Vj + Vjp)          #average
+        Vmd = Vav - 0.5*dm4jph        #Vmedian
+        Vlc = Vj + 0.5*(Vj-Vjm) + B2*dm4jmh
+        Vmin = max(min(Vj, Vjp, Vmd), min(Vj, Vul, Vlc));
+        Vmax = min(max(Vj, Vjp, Vmd), max(Vj, Vul, Vlc));
+        Vl = Vor + minmod(Vmin-Vor, Vmax-Vor) #this places Vor between Vmin and Vmax
+    end
+    return Vl
+end 
+
+
+function MP5reconstruction!(Vl, Vjmm, Vjm, Vj, Vjp, Vjpp, N_Fields)
+    B1 = 0.0166666666666666667  #1/60
+    B2 = 1.3333333333333333333  #4/3
+    eps = 1e-10
+    ALPHA = 4.0
+    #=Vjmm = V[1]
+    Vjm = V[2]
+    Vj = V[3]
+    Vjp = V[4]
+    Vjpp = V[5]=#
+    for i in 1:N_Fields
+        Vor = B1*(2.0*Vjmm[i] - 13.0*Vjm[i] + 47.0*Vj[i] + 27*Vjp[i] - 3.0*Vjpp[i]) #=This is the original interpolation.
+                                                                       All that follows is the application of 
+                                                                       limiters to treat shocks=#
+        Vmp = Vj[i] + minmod(Vjp[i]-Vj[i], ALPHA*(Vj[i]-Vjm[i]))  #mp = monotonicity preserving. It's the median between v_j, v_(j+1)
+                                                  #and an upper limit v^UL = v_j+ALPHA(v_j-v_(j-1))
+        if ((Vor-Vj[i])*(Vor-Vmp)) < eps             #this condition is equivalent to asking vl in [vj, v^{MP}]
+            Vl[i] = Vor #vl = v^{L}_{j+1/2}
+        else
+            djm1 = Vjmm[i] - 2.0*Vjm[i] + Vj[i]
+            dj = Vjm[i] - 2*Vj[i] + Vjp[i]
+            djp1 = Vj[i] - 2.0*Vjp[i] + Vjpp[i]
+            dm4jph = minmod(4*dj - djp1, 4*djp1-dj, dj, djp1)  #ph = plus half (+1/2)
+            dm4jmh = minmod(4*dj - djm1, 4*djm1-dj, dj, djm1)  #mh = minus half (-1/2)
+            #d^{M4}_{j+1/2} = \minmod(4d_{j}-d_{j+1},4d_{j+1}-d_{j}, d_{j}, d_{j+1})
+            Vul = Vj[i] + ALPHA*(Vj[i] - Vjm[i])   #upper limit
+            Vav = 0.5*(Vj[i] + Vjp[i])          #average
+            Vmd = Vav - 0.5*dm4jph        #Vmedian
+            Vlc = Vj[i] + 0.5*(Vj[i]-Vjm[i]) + B2*dm4jmh
+            Vmin = max(min(Vj[i], Vjp[i], Vmd), min(Vj[i], Vul, Vlc));
+            Vmax = min(max(Vj[i], Vjp[i], Vmd), max(Vj[i], Vul, Vlc));
+            Vl[i] = Vor + minmod(Vmin-Vor, Vmax-Vor) #this places Vor between Vmin and Vmax
+        end
+    end
+end 
+
+
+
+function mp5!(dv, v, par, t) # j is the grid position
+    #asumimos u unidimensional por ahora
+    h, N_Fields, N, par_flux, par_source, Fx!, Speed_max, Source, par_mem = par
+    #h_1, U, N, χ, par_flux, Flux, Speed_max, Source, par_mem = par_mp5 
+    F_Mm3, F_Mm2, F_Mm1, F_M, F_Mp1, F_Mp2, F_Mp3, F_Pm3, F_Pm2, F_Pm1, F_P, F_Pp1, F_Pp2, F_Pp3, F_LP,   F_LM, F_RP, F_RM, H_m, H_p = par_mem
+    
+    fields = reshape(v,(N,N_Fields))
+    dfields = reshape(dv,(N,N_Fields))
+    #nota: f minuscula o u se usa para hablar de campos, F mayúscula para hablar de Flujos.
+    
+    for idx in 1:N
+        #first we defined shifted indices
+        idxm3 = mod(((idx-3) - 1),N) + 1
+        idxm2 = mod(((idx-2) - 1),N) + 1
+        idxm1 = mod(((idx-1) - 1),N) + 1
+        idxp1 = mod(((idx+1) - 1),N) + 1
+        idxp2 = mod(((idx+2) - 1),N) + 1
+        idxp3 = mod(((idx+3) - 1),N) + 1
+        
+    
+        um3 = @view fields[idxm3,:]
+        um2 = @view fields[idxm2,:]
+        um1 = @view fields[idxm1,:]
+        u   = @view fields[idx,:]
+        up1 = @view fields[idxp1,:]
+        up2 = @view fields[idxp2,:]
+        up3 = @view fields[idxp3,:]
+        
+        S_MAX = max(Speed_max(up3, par_flux), Speed_max(um3, par_flux), 
+            Speed_max(up2, par_flux), Speed_max(um2, par_flux), Speed_max(up1, par_flux), 
+            Speed_max(um1, par_flux), Speed_max(u, par_flux)) #maximum speed
+        
+        Fx!(F_Pm3, um3, par_flux)
+        Fx!(F_Pm2, um2, par_flux)
+        Fx!(F_Pm1, um1, par_flux)
+        Fx!(F_P, u, par_flux)
+        Fx!(F_Pp1, up1, par_flux)
+        Fx!(F_Pp2, up2, par_flux)
+        Fx!(F_Pp3, up3, par_flux)
+        
+        
+        @. F_Mm3 = 0.5 * (F_Pm3 - S_MAX * um3)
+        @. F_Mm2 = 0.5 * (F_Pm2 - S_MAX * um2)
+        @. F_Mm1 = 0.5 * (F_Pm1 - S_MAX * um1)
+        @. F_M   = 0.5 * (F_P   - S_MAX * u)
+        @. F_Mp1 = 0.5 * (F_Pp1 - S_MAX * up1)
+        @. F_Mp2 = 0.5 * (F_Pp2 - S_MAX * up2)
+        @. F_Mp3 = 0.5 * (F_Pp3 - S_MAX * up3)
+        @. F_Pm3 = 0.5 * (F_Pm3 + S_MAX * um3)
+        @. F_Pm2 = 0.5 * (F_Pm2 + S_MAX * um2)
+        @. F_Pm1 = 0.5 * (F_Pm1 + S_MAX * um1)
+        @. F_P   = 0.5 * (F_P   + S_MAX * u)
+        @. F_Pp1 = 0.5 * (F_Pp1 + S_MAX * up1)
+        @. F_Pp2 = 0.5 * (F_Pp2 + S_MAX * up2)
+        @. F_Pp3 = 0.5 * (F_Pp3 + S_MAX * up3)
+    
+        MP5reconstruction!(F_RM, F_Mp2, F_Mp1,  F_M,  F_Mm1, F_Mm2, N_Fields)
+        MP5reconstruction!(F_LM, F_Pm3, F_Pm2, F_Pm1, F_P,  F_Pp1, N_Fields)
+        MP5reconstruction!(F_LP, F_Pm2, F_Pm1,  F_P,  F_Pp1, F_Pp2, N_Fields)
+        MP5reconstruction!(F_RP, F_Mp3, F_Mp2, F_Mp1, F_M,  F_Mm1, N_Fields)
+        
+        @. H_p = F_LP + F_RP
+        @. H_m = F_LM + F_RM
+        
+        @. dfields[idx, :] = -h*(H_p - H_m)  + Source(u,t,par_source)[idx]
+        
+    end
+    
+end
