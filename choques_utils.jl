@@ -251,7 +251,7 @@ end
 
 function mp5!(dv, v, par, t) # j is the grid position
     #asumimos u unidimensional por ahora
-    h, N_Fields, N, par_flux, par_source, Fx!, Speed_max, Source, par_mem = par
+    h, N_Fields, N, par_flux, par_source, Fx!, Speed_max, Source!, par_mem = par
     #h_1, U, N, χ, par_flux, Flux, Speed_max, Source, par_mem = par_mp5 
     F_Mm3, F_Mm2, F_Mm1, F_M, F_Mp1, F_Mp2, F_Mp3, F_Pm3, F_Pm2, F_Pm1, F_P, F_Pp1, F_Pp2, F_Pp3, F_LP,   F_LM, F_RP, F_RM, H_m, H_p = par_mem
     
@@ -313,7 +313,8 @@ function mp5!(dv, v, par, t) # j is the grid position
         @. H_p = F_LP + F_RP
         @. H_m = F_LM + F_RM
         
-        @. dfields[idx, :] = -h*(H_p - H_m)  + Source(u,t,par_source)[idx]
+        Source!(sourcevec, u, t, par_source)
+        @. dfields[idx, :] = -h*(H_p - H_m) + sourcevec #+ Source(u,t,par_source)
         
     end
     

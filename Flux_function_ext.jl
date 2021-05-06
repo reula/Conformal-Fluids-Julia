@@ -175,10 +175,65 @@ function Is(u,t,par)
 #    return Is[:]      #(1 - ℯ^(-5. *t))
 end
 
+function Is!(sourcevec,u,t,par)
+    χ, a = par #only used to test otherwise are defined below. a is and amplitude to change I from outside
+    Is = zeros(10)
+    a = -1.
+    flu = u[6:end]
+    μ = flu[1] 
+    χ₀= χ[1]
+    χ₁= χ[2] # lo hacemos positivo
+    if χ₁ < 0
+        κ = χ₀*μ^5/(15π*χ₁^2) # OK 
+        λ = -χ₀*μ^4/(1π*χ₁^2)   # OK
+    else
+        κ = 1.
+        λ = 1.
+    end
+    T = (abs(μ))^(-1//2) # use μ positive, so I changed μ -> -μ
+    v = flu[2]
+    x1 = flu[3]
+    x2 = flu[4]
+    x3 = flu[5]
+    γ = (1 - v^2)^(-1//2)
+    
+    sourcevec[1] = 0.0
+    sourcevec[2] = 0.0
+    sourcevec[3] = -2//5*(γ^2-1//4)*T*x1/(γ*λ) - 2γ*v*x2/T/κ - v^2*T*x3/(γ*λ)
+    sourcevec[4] = -2//5*γ*v*T*x1/λ - γ*(v^2+1)*x2/T/κ - v*T*x3/(γ*λ)
+    sourcevec[5] = -2//5*(γ^2*v^2+1//4)*T*x1/λ/γ - 2γ*v*x2/T/κ - T*x3/(γ*λ)
+    sourcevec[6] = 0.0
+    sourcevec[7] = 0.0
+    sourcevec[8] = 0.0
+    sourcevec[9] = 0.0
+    sourcevec[10] = 0.0
+
+#    Is[1] = 0.
+#    Is[2] = 0.
+#    Is[3] = -2//5*a*(γ^2-1//4)*T*x1/(γ*λ) - 2γ*v*x2/T/κ - v^2*T*x3/(γ*λ)
+#    Is[4] = -2//5*a*γ*v*T*x1/λ - γ*(v^2+1)*x2/T/κ - v*T*x3/(γ*λ)
+#    Is[5] = -2//5*a*(γ^2*v^2+1//4)*T*x1/λ/γ - 2γ*v*x2/T/κ - T*x3/(γ*λ)
+#    return Is[:]      #(1 - ℯ^(-5. *t))
+end
+
 function Is_dummy(u,t,par)
     Is = zeros(10)
     return Is[:]
 end
+
+function Is_dummy!(sourcevec,u,t,par)
+    sourcevec[1] = 0.0
+    sourcevec[2] = 0.0
+    sourcevec[3] = 0.0
+    sourcevec[4] = 0.0
+    sourcevec[5] = 0.0
+    sourcevec[6] = 0.0
+    sourcevec[7] = 0.0
+    sourcevec[8] = 0.0
+    sourcevec[9] = 0.0
+    sourcevec[10] = 0.0
+end
+
 
 function Speed_max(u, par_flux)
     #  Here we compute the maximal propagation speed of the equation, for the cases of real eigenvalues is the spectral radious of the 
