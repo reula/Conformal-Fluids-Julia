@@ -140,19 +140,20 @@ Is!(flu,Is,par) - I_c # should be very small
 ```
 """
 function Is(u,t,par)
-    χ, a = par #only used to test otherwise are defined below. a is and amplitude to change I from outside
+    χ, ξ = par #only used to test otherwise are defined below. a is and amplitude to change I from outside
     Is = zeros(10)
-    a = -1.
     flu = u[6:end]
     μ = flu[1] 
     χ₀= χ[1]
     χ₁= χ[2] # lo hacemos positivo
     if χ₁ < 0
-        κ = χ₀*μ^5/(15π*χ₁^2) # OK 
-        λ = -χ₀*μ^4/(1π*χ₁^2)   # OK
+        κ = χ₀*μ^5*ξ[1]/χ₁^2 # OK 
+        λ = -χ₀*μ^4*ξ[2]/χ₁^2  # OK
+        η = -χ₀*μ^3*ξ[3]/χ₁^2
     else
         κ = 1.
         λ = 1.
+        η = 1.
     end
     T = (abs(μ))^(-1//2) # use μ positive, so I changed μ -> -μ
     v = flu[2]
@@ -162,9 +163,12 @@ function Is(u,t,par)
     γ = (1 - v^2)^(-1//2)
     return [0.;
             0.;
-            -2//5*(γ^2-1//4)*T*x1/(γ*λ) - 2γ*v*x2/T/κ - v^2*T*x3/(γ*λ);
-            -2//5*γ*v*T*x1/λ - γ*(v^2+1)*x2/T/κ - v*T*x3/(γ*λ);
-            -2//5*(γ^2*v^2+1//4)*T*x1/λ/γ - 2γ*v*x2/T/κ - T*x3/(γ*λ);
+            -2//5*(γ^2-1//4)*T*x1/(γ*λ) - 2γ*v*x2/T/κ - v^2*T*x3/(γ*η);
+            -2//5*γ*v*T*x1/λ - γ*(v^2+1)*x2/T/κ - v*T*x3/(γ*η);
+            -2//5*(γ^2*v^2+1//4)*T*x1/η/γ - 2γ*v*x2/T/κ + T*x3/(γ*η);
+            #-2//5*(γ^2-1//4)*T*x1/(γ*λ) - 2γ*v*x2/T/κ - v^2*T*x3/(γ*λ);
+            #-2//5*γ*v*T*x1/λ - γ*(v^2+1)*x2/T/κ - v*T*x3/(γ*λ);
+            #-2//5*(γ^2*v^2+1//4)*T*x1/λ/γ - 2γ*v*x2/T/κ - T*x3/(γ*λ);
             0.; 0.; 0.; 0.; 0.
             ]
 #    Is[1] = 0.
@@ -176,19 +180,21 @@ function Is(u,t,par)
 end
 
 function Is!(sourcevec,u,t,par)
-    χ, a = par #only used to test otherwise are defined below. a is and amplitude to change I from outside
+    χ, ξ = par #only used to test otherwise are defined below. a is and amplitude to change I from outside
     Is = zeros(10)
-    a = -1.
+    #a = -1.
     flu = u[6:end]
     μ = flu[1] 
     χ₀= χ[1]
     χ₁= χ[2] # lo hacemos positivo
     if χ₁ < 0
-        κ = χ₀*μ^5/(15π*χ₁^2) # OK 
-        λ = -χ₀*μ^4/(1π*χ₁^2)   # OK
+        κ = χ₀*μ^5*ξ[1]/χ₁^2 # OK 
+        λ = -χ₀*μ^4*ξ[2]/χ₁^2  # OK
+        η = χ₀*μ^3*ξ[3]/χ₁^2
     else
         κ = 1.
         λ = 1.
+        η = 1.
     end
     T = (abs(μ))^(-1//2) # use μ positive, so I changed μ -> -μ
     v = flu[2]
@@ -199,9 +205,12 @@ function Is!(sourcevec,u,t,par)
     
     sourcevec[1] = 0.0
     sourcevec[2] = 0.0
-    sourcevec[3] = -2//5*(γ^2-1//4)*T*x1/(γ*λ) - 2γ*v*x2/T/κ - v^2*T*x3/(γ*λ)
-    sourcevec[4] = -2//5*γ*v*T*x1/λ - γ*(v^2+1)*x2/T/κ - v*T*x3/(γ*λ)
-    sourcevec[5] = -2//5*(γ^2*v^2+1//4)*T*x1/λ/γ - 2γ*v*x2/T/κ - T*x3/(γ*λ)
+    #sourcevec[3] = -2//5*(γ^2-1//4)*T*x1/(γ*λ) - 2γ*v*x2/T/κ - v^2*T*x3/(γ*λ)
+    #sourcevec[4] = -2//5*γ*v*T*x1/λ - γ*(v^2+1)*x2/T/κ - v*T*x3/(γ*λ)
+    #sourcevec[5] = -2//5*(γ^2*v^2+1//4)*T*x1/λ/γ - 2γ*v*x2/T/κ - T*x3/(γ*λ)
+    sourcevec[3] = -2//5*(γ^2-1//4)*T*x1/(γ*λ) - 2γ*v*x2/T/κ - v^2*T*x3/(γ*η)
+    sourcevec[4] = -2//5*γ*v*T*x1/λ - γ*(v^2+1)*x2/T/κ - v*T*x3/(γ*η)
+    sourcevec[5] = -2//5*(γ^2*v^2+1//4)*T*x1/η/γ - 2γ*v*x2/T/κ + T*x3/(γ*η)
     sourcevec[6] = 0.0
     sourcevec[7] = 0.0
     sourcevec[8] = 0.0
