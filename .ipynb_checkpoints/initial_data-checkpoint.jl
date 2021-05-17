@@ -15,7 +15,7 @@ function create_initial_data(name::String, u_i, par)
             x[i] = dx*(i-1)
             if x[i] > x0 && x[i] < x1
                 flu_0[i,2] = v0 + δv *(x[i] - x0)^4 * (x[i] - x1)^4 / (x1-x0)^8 * 250                   #Sz
-                flu_0[i,1] = -0.0 # * sin(pi*(x[i] - x0)/(x1-x0))^4 * sin(2*pi*(x[i] - x0)/(x1-x0))     #By
+                flu_0[i,1] = -6.0 # * sin(pi*(x[i] - x0)/(x1-x0))^4 * sin(2*pi*(x[i] - x0)/(x1-x0))     #By
             else
                 flu_0[i,2] = v0
             end
