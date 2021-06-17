@@ -1,5 +1,5 @@
 function create_initial_data(name::String, u_i, par)
-    χ, U, M, Euler = par
+    χ, U, M, Euler, F, Jac = par
     
 #    u_i=zeros(M*U)
     con_0 = view(reshape(u_i,(M,U)),:,1:U÷2)
@@ -24,7 +24,7 @@ function create_initial_data(name::String, u_i, par)
         #flu_0[i,2] = flu_0[i,2] + 0.1  # v
     
         end
-    f_to_c!(u_i, (χ, U, M)); # populate the conservative variables from the fluid ones
+    f_to_c!(u_i, (χ, U, M, F)); # populate the conservative variables from the fluid ones
 
     elseif name == "small_pulse_to_the_right"
 
@@ -42,7 +42,7 @@ function create_initial_data(name::String, u_i, par)
             end
                 flu_0[i,1] = -1.
         end
-        par_inv = (χ, tol, 10000, U, M)
+        par_inv = (χ, tol, 10000, U, M, F, Jac)
         return u_i[:] = c_to_f!(u_i,par_inv);
         
     elseif (name == "big_pulse_to_the_right") || (name == "big_pulse_negative_I")
@@ -64,13 +64,13 @@ function create_initial_data(name::String, u_i, par)
     
         if !Euler
             χ_int = [- 1.0; -0.; - 10.0] #primero nos aproximamos a la solución con χ₁=0
-            par_inv = (χ, tol, 1000, U, M)
+            par_inv = (χ, tol, 1000, U, M, F, Jac)
             u_i = c_to_f!(u_i,par_inv);
             χ = [- 1.0; -0.5; - 10.0] #luego buscamos la buena con la semilla anterior
-            par_inv = (χ, tol, 1000, U, M)
+            par_inv = (χ, tol, 1000, U, M, F, Jac)
             u_i = c_to_f!(u_i,par_inv);
         #check!
-            if max(abs, f_to_c!(u_i,(χ,U,M)) - u_i) > 0.001
+            if max(abs, f_to_c!(u_i,(χ,U,M,F)) - u_i) > 0.001
             error("Not converging")
             else
                 return u_i

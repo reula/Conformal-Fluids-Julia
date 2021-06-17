@@ -84,16 +84,14 @@ function Flux!(F,u,p)
 end
 
 
-function Flux_imp!(F,u,p)
-    χ = p
-    #f = zeros(length(u))
+function Flux_imp!(Fl,u,p)
+   #f = zeros(length(u))
     #c_to_f(u,χ)    
     #con = view[1:5]
     flu = u[6:end]
     con = u[1:5]
-    μ = flu[1]  # esto es -μ
-    #μ = view(flu,1)
-    T = (abs(μ))^(-1//2) # use μ positive, so I changed μ -> -μ
+    χ = p
+    T = (abs(flu[1]))^(-1//2) # use μ positive, so I changed μ -> -μ
     v = flu[2]
     ν = flu[3]
     r1 = flu[4]
@@ -108,13 +106,13 @@ function Flux_imp!(F,u,p)
                     + r1^2*T^2*(364γ^2*v^2*(v^2 -1)-217+49v^2)
                     + r1*t11*T*336*γ*v*(v^2-1)
                     + t11^2*(111 + 126v^2 - 15v^4 - 204γ^2*v^2*(1-v^2)^2)/4)
-    F[1] = con[2]
-    F[2] = T11_0 + T11_1 + T11_2
-    F[3] = con[4]
-    F[4] = con[5]
-    F[5] = -3χ₁*γ*v*T^5*(2γ^2*v^2+1) - 12χ₂*(v*T*10*γ*(2γ^2*v^2+1)*ν  + 3*(1+6γ^2*v^2)*r1    
+    Fl[1] = con[2]
+    Fl[2] = T11_0 + T11_1 + T11_2
+    Fl[3] = con[4]
+    Fl[4] = con[5]
+    Fl[5] = -3χ₁*γ*v*T^5*(2γ^2*v^2+1) - 12χ₂*(v*T*10*γ*(2γ^2*v^2+1)*ν  + 3*(1+6γ^2*v^2)*r1    
          + 3v*γ*t11/T)
-    return -F[:]
+    return -Fl[:]
 end
 
 function Flux_cut(u,p)
@@ -221,38 +219,25 @@ end
 function Is!(sourcevec,u,t,par)
     χ, ξ = par #only used to test otherwise are defined below. a is and amplitude to change I from outside
     Is = zeros(10)
-    #a = -1.
     flu = u[6:end]
     μ = flu[1] 
     χ₀= χ[1]
-    χ₁= χ[2] # lo hacemos positivo
-    if χ₁ < 0
-        κ = χ₀*ξ[1]/χ₁^2 # OK 
-        λ = χ₀*ξ[2]/χ₁^2  # OK
-        η = χ₀*ξ[3]/χ₁^2
-    else
-        κ = -1.
-        λ = -1.
-        η = -1.
-    end
+    χ₁= -χ[2] # lo hacemos positivo
+    κ = ξ[1]χ₀ # χ₀*ξ[1]/χ₁^2 # OK 
+    λ = ξ[2]χ₀ #χ₀*ξ[2]/χ₁^2  # OK
+    η = ξ[3]χ₀ #χ₀*ξ[3]/χ₁^2
     T = (abs(μ))^(-1//2) # use μ positive, so I changed μ -> -μ
     v = flu[2]
-    x1 = flu[3]
-    x2 = flu[4]
-    x3 = flu[5]
     γ = (1 - v^2)^(-1//2)
+    x1 = 10*γ*T/3*flu[3]
+    x2 = flu[4]
+    x3 = γ/T*flu[5]
     
     sourcevec[1] = 0.0
     sourcevec[2] = 0.0
-    #sourcevec[3] = -2//5*(γ^2-1//4)*T*x1/(γ*λ) - 2γ*v*x2/T/κ - v^2*T*x3/(γ*λ)
-    #sourcevec[4] = -2//5*γ*v*T*x1/λ - γ*(v^2+1)*x2/T/κ - v*T*x3/(γ*λ)
-    #sourcevec[5] = -2//5*(γ^2*v^2+1//4)*T*x1/λ/γ - 2γ*v*x2/T/κ - T*x3/(γ*λ)
-    #sourcevec[3] = -2//5*(γ^2-1//4)*T*x1/(γ*λ) - 2γ*v*x2/T/κ - v^2*T*x3/(γ*η)
-    #sourcevec[4] = -2//5*γ*v*T*x1/λ - γ*(v^2+1)*x2/T/κ - v*T*x3/(γ*η)
-    #sourcevec[5] = -2//5*(γ^2*v^2+1//4)*T*x1/η/γ - 2γ*v*x2/T/κ + T*x3/(γ*η)
-    sourcevec[3] = -(3//10*(γ^2-1//4)*x1/(γ*λ) + 2γ*v*x2/κ - v^2*x3/(γ*η))/μ^4/T
-    sourcevec[4] = -(3//10*γ*v*x1/λ + γ*(v^2+1)*x2/κ - v*x3/(γ*η))/μ^4/T
-    sourcevec[5] = -(3//10*(γ^2*v^2+1//4)*x1/λ/γ + 2γ*v*x2/κ - x3/(γ*η))/μ^4/T
+    sourcevec[3] = (-3//10*(γ^2    -1//4)*x1/λ         + 2γ*v*x2/κ/T      - μ*v^2*x3/η)/μ^5;
+    sourcevec[4] = (-3//10*(γ^2*v  + 0  )*x1/λ         + γ*(v^2+1)*x2/κ/T - μ*v*x3/η)/μ^5;
+    sourcevec[5] = (-3//10*(γ^2*v^2+1//4)*x1/λ         + 2γ*v*x2/κ/T      - μ*x3/η)/μ^5;
     sourcevec[6] = 0.0
     sourcevec[7] = 0.0
     sourcevec[8] = 0.0
@@ -284,6 +269,45 @@ function Is_dummy!(sourcevec,u,t,par)
     sourcevec[9] = 0.0
     sourcevec[10] = 0.0
 end
+
+function Is_alt(flu, χ, ξ)
+    #(χ, ξ) = par 
+    μ = flu[1] 
+    χ₀= χ[1]
+    χ₁= -χ[2] # lo hacemos positivo
+    κ = ξ[1]χ₀ # χ₀*ξ[1]/χ₁^2 # OK 
+    λ = ξ[2]χ₀ #χ₀*ξ[2]/χ₁^2  # OK
+    η = ξ[3]χ₀ #χ₀*ξ[3]/χ₁^2
+    T = (abs(μ))^(-1//2) # use μ positive, so I changed μ -> -μ
+    v = flu[2]
+    γ = (1. - v^2)^(-1//2)
+    x1 = 10*γ*T/3*flu[3]
+    x2 = flu[4]
+    x3 = γ/T*flu[5]
+    
+    #Is[1] = 0.
+    #Is[2] = 0.
+    #Is[3] = -2//5*a*(γ^2-1//4)*T*x1/(γ*λ) - 2γ*v*x2/T/κ - v^2*T*x3/(γ*λ)
+    #Is[4] = -2//5*a*γ*v*T*x1/λ - γ*(v^2+1)*x2/T/κ - v*T*x3/(γ*λ)
+    #Is[5] = -2//5*a*(γ^2*v^2+1//4)*T*x1/λ/γ - 2γ*v*x2/T/κ - T*x3/(γ*λ)
+    #return Is[:]      #(1 - ℯ^(-5. *t))
+    return [0.;
+            0.;
+            #(-3//10*(γ^2-1//4)*x1/(γ*λ)   + 2γ*v*x2/κ      - v^2*x3/(γ*η))/μ^4/T;
+            #(-3//10*γ*v*x1/λ              + γ*(v^2+1)*x2/κ - v*x3/(γ*η))/μ^4/T;
+            #(-3//10*(γ^2*v^2+1//4)*x1/λ/γ + 2γ*v*x2/κ      - x3/(γ*η))/μ^4/T;
+            #-2//5*(γ^2-1//4)*T*x1/(γ*λ) - 2γ*v*x2/T/κ - v^2*T*x3/(γ*η);
+            #-2//5*γ*v*T*x1/λ - γ*(v^2+1)*x2/T/κ - v*T*x3/(γ*η);
+            #-2//5*(γ^2*v^2+1//4)*T*x1/η/γ - 2γ*v*x2/T/κ + T*x3/(γ*η)
+            #-2//5*(γ^2-1//4)*T*x1/(γ*λ) - 2γ*v*x2/T/κ - v^2*T*x3/(γ*λ);
+            #-2//5*γ*v*T*x1/λ - γ*(v^2+1)*x2/T/κ - v*T*x3/(γ*λ);
+            #-2//5*(γ^2*v^2+1//4)*T*x1/λ/γ - 2γ*v*x2/T/κ - T*x3/(γ*λ)
+            (-3//10*(γ^2    -1//4)*x1/λ         + 2γ*v*x2/κ/T      - μ*v^2*x3/η)/μ^5;
+            (-3//10*(γ^2*v  + 0  )*x1/λ         + γ*(v^2+1)*x2/κ/T - μ*v*x3/η)/μ^5;
+            (-3//10*(γ^2*v^2+1//4)*x1/λ         + 2γ*v*x2/κ/T      - μ*x3/η)/μ^5;
+            ]
+end
+
 
 
 function Speed_max(u, par_flux)

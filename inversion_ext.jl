@@ -49,8 +49,9 @@ JS = Symbolics.jacobian(F(f,c,p),f);
 J_exp = Symbolics.build_function(JS, f, c, p);
 Jac = eval(J_exp[1]);
 
-function NR_step!(F, Jac, u0, y, p)
-    u = u0 - Jac(u0,y, p) \ F(u0,y,p)
+function NR_step!(F, Jac, r, u0, y, p)
+#    u = u0 - Jac(u0,y, p) \ F(u0,y,p)
+    u0 = u0 - Jac(r,u0,y, p) \ F(r,u0,y,p)
 end
 
 """
@@ -108,23 +109,23 @@ con0[1,:] = [0.1366314976448222, 0.07009306769467444, 0.06115332989597844, 0.071
 ```
 """
 function c_to_f!(u, p)
-    χ, tol, iter_max, N, M = p 
+    χ, tol, iter_max, N, M, F, Jac = p 
     #reshape(u,(N,U))
     tol = tol^2
     con = view(reshape(u,(M,N)),:,1:N÷2)
     flu = view(reshape(u,(M,N)),:,N÷2+1:N)
     for j ∈ 1:M
-        #flu[j,1] = -flu[j,1]
+        r = ones(N÷2)
         iter = 1
-        while F(flu[j,:],con[j,:], χ)'*F(flu[j,:],con[j,:], χ) > tol && iter < iter_max
-            flu[j,:] = NR_step!(F, Jac, flu[j,:], con[j,:], χ)
+#        while F(flu[j,:],con[j,:], χ)'*F(flu[j,:],con[j,:], χ) > tol && iter < iter_max # para F que no cambia valores
+        while r'*r > tol && iter < iter_max
+            flu[j,:] = NR_step!(F, Jac, r, flu[j,:], con[j,:], χ)
+#            println(r)
             iter = iter + 1
             if iter == iter_max 
             println("iter_max reached j = $j")
             end
         end
-    #println(iter)
-        #flu[j,1] = -flu[j,1]
     end
     return u[:]
 end
@@ -176,14 +177,14 @@ println(u0)
 ```
 """
 function f_to_c!(u, p)
-    χ, N, M = p
+    χ, N, M, F= p
     con = view(reshape(u,(M,N)),:,1:N÷2)
     flu = view(reshape(u,(M,N)),:,N÷2+1:N)
     y = zeros(N÷2)
+    yy = zeros(N÷2)
     for j ∈ 1:M
-        #flu[j,1] = -flu[j,1]
-        con[j,:] = F(flu[j,:],y, χ)
-        #flu[j,1] = -flu[j,1]
+        con[j,:] = F(yy,flu[j,:],y, χ) # versión vieja
+        #F(con[j,:],flu[j,:],y, χ)
     end
     return u[:]
 end
@@ -237,9 +238,7 @@ end
 
 
 function F_alt!(R,flu,con,χ)    
-    #μ = flu[1]  # esto es -μ
-    #μ = view(flu,1)
-    T = (abs(flu[1]))^(-1/2) # use μ positive, so I changed μ -> -μ
+    T = (abs(flu[1]))^(-1/2) 
     v = flu[2]
     ν = flu[3]
     r1 = flu[4]
