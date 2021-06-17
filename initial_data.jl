@@ -63,14 +63,14 @@ function create_initial_data(name::String, u_i, par)
         end
     
         if !Euler
-            χ_int = [- 1.0; -0.; - 10.0] #primero nos aproximamos a la solución con χ₁=0
-            par_inv = (χ, tol, 1000, U, M, F, Jac)
+            χ_int = [χ[1]; -0.; χ[3]] #primero nos aproximamos a la solución con χ₁=0
+            par_inv = (χ_int, tol, 1000, U, M, F, Jac)
             u_i = c_to_f!(u_i,par_inv);
-            χ = [- 1.0; -0.5; - 10.0] #luego buscamos la buena con la semilla anterior
+            #luego buscamos la buena con la semilla anterior
             par_inv = (χ, tol, 1000, U, M, F, Jac)
             u_i = c_to_f!(u_i,par_inv);
         #check!
-            if max(abs, f_to_c!(u_i,(χ,U,M,F)) - u_i) > 0.001
+            if maximum(abs, f_to_c!(u_i,(χ,U,M,F)) - u_i) > 0.001
             error("Not converging")
             else
                 return u_i
