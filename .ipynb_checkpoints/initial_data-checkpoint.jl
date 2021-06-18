@@ -42,7 +42,7 @@ function create_initial_data(name::String, u_i, par)
             end
                 flu_0[i,1] = -1.
         end
-        par_inv = (χ, tol, 10000, U, M, F, Jac)
+        par_inv = (χ, 1e-8, 10000, U, M, F, Jac)
         return u_i[:] = c_to_f!(u_i,par_inv);
         
     elseif (name == "big_pulse_to_the_right") || (name == "big_pulse_negative_I")
@@ -64,10 +64,10 @@ function create_initial_data(name::String, u_i, par)
     
         if !Euler
             χ_int = [χ[1]; -0.; χ[3]] #primero nos aproximamos a la solución con χ₁=0
-            par_inv = (χ_int, tol, 1000, U, M, F, Jac)
+            par_inv = (χ_int, 1e-8, 1000, U, M, F, Jac)
             u_i = c_to_f!(u_i,par_inv);
             #luego buscamos la buena con la semilla anterior
-            par_inv = (χ, tol, 1000, U, M, F, Jac)
+            par_inv = (χ, 1e-8, 1000, U, M, F, Jac)
             u_i = c_to_f!(u_i,par_inv);
         #check!
             if maximum(abs, f_to_c!(u_i,(χ,U,M,F)) - u_i) > 0.001
@@ -80,6 +80,36 @@ function create_initial_data(name::String, u_i, par)
             return u_i = c_to_f!(u_i,par_inv);
         end #!Euler
 
+        
+        constant_fields
+        
+    elseif name == "constant_fields" 
+    
+        e0 = 6.; δe = 0.0
+        s0 = 0.; δs = 0.0
+        x0 = 0.; x1 = 0.2
+        c1 = 0.1
+        c2 = 0.2
+        c3 = 0.3
+        λ = 1. /sqrt(3.)
+        for i in 1:M
+            x[i] = dx*(i-1)
+            if x[i] > x0 && x[i] < x1
+                con_0[i,1] = e0 + δe *(x[i] - x0)^4 * (x[i] - x1)^4 / (x1-x0)^8 * 250            #Sz
+                con_0[i,2] = λ*(con_0[i,1] - e0) + s0
+            else
+                con_0[i,1] = e0
+                con_0[i,2] = s0
+            end
+                flu_0[i,1] = -sqrt(con_0[i,1])/6
+                con_0[i,3] = c1
+                con_0[i,4] = c2
+                con_0[i,5] = c3
+        end
+        par_inv = (χ, 1e-8, 100, U, M, F, Jac)
+        return u_i = c_to_f!(u_i,par_inv);
+
+                
     elseif name == "only_diss"
 
         e0 = 6.; δe = 0.0
