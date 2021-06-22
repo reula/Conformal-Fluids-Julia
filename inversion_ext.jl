@@ -190,7 +190,7 @@ function f_to_c!(u, p)
 end
 
 function c_to_f_direct!(u,p)
-    χ, N, M = p
+    N, M = p
     c = view(reshape(u,(M,N)),:,1:N÷2)
     f = view(reshape(u,(M,N)),:,N÷2+1:N)
     

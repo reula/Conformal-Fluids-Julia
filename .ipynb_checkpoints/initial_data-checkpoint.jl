@@ -77,11 +77,8 @@ function create_initial_data(name::String, u_i, par)
             end
             
         else
-            return u_i = c_to_f!(u_i,par_inv);
+            return u_i = c_to_f_direct!(u_i,(U,M))
         end #!Euler
-
-        
-        constant_fields
         
     elseif name == "constant_fields" 
     
