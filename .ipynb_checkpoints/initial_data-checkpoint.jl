@@ -1,5 +1,5 @@
 function create_initial_data(name::String, u_i, par)
-    χ, U, M, Euler, F, Jac = par
+    χ, U, M, dx, Euler, F, Jac = par
     
 #    u_i=zeros(M*U)
     con_0 = view(reshape(u_i,(M,U)),:,1:U÷2)
@@ -12,10 +12,10 @@ function create_initial_data(name::String, u_i, par)
         v0 = 0.0; δv = 0.1 
 
         for i in 1:M
-            x[i] = dx*(i-1)
-            if x[i] > x0 && x[i] < x1
-                flu_0[i,2] = v0 + δv *(x[i] - x0)^4 * (x[i] - x1)^4 / (x1-x0)^8 * 250                   #Sz
-                flu_0[i,1] = -6.0 # * sin(pi*(x[i] - x0)/(x1-x0))^4 * sin(2*pi*(x[i] - x0)/(x1-x0))     #By
+            x = dx*(i-1)
+            if x > x0 && x < x1
+                flu_0[i,2] = v0 + δv *(x - x0)^4 * (x - x1)^4 / (x1-x0)^8 * 250                   #Sz
+                flu_0[i,1] = -6.0 # * sin(pi*(x - x0)/(x1-x0))^4 * sin(2*pi*(x - x0)/(x1-x0))     #By
             else
                 flu_0[i,2] = v0
             end
@@ -32,9 +32,9 @@ function create_initial_data(name::String, u_i, par)
         x0 = 0.; x1 = 0.2
         λ = 1. /sqrt(3.)
         for i in 1:M
-            x[i] = dx*(i-1)
-            if x[i] > x0 && x[i] < x1
-                con_0[i,1] = e0 + δe *(x[i] - x0)^4 * (x[i] - x1)^4 / (x1-x0)^8 * 250                   #Sz
+            x = dx*(i-1)
+            if x > x0 && x < x1
+                con_0[i,1] = e0 + δe *(x - x0)^4 * (x - x1)^4 / (x1-x0)^8 * 250                   #Sz
                 con_0[i,2] = λ*(con_0[i,1] - e0)
             else
                 con_0[i,1] = e0
@@ -51,9 +51,9 @@ function create_initial_data(name::String, u_i, par)
         x0 = 0.; x1 = 0.2
         λ = 1. /sqrt(3.)
         for i in 1:M
-            x[i] = dx*(i-1)
-            if x[i] > x0 && x[i] < x1
-                con_0[i,1] = e0 + δe *(x[i] - x0)^4 * (x[i] - x1)^4 / (x1-x0)^8 * 250                   #Sz
+            x = dx*(i-1)
+            if x > x0 && x < x1
+                con_0[i,1] = e0 + δe *(x - x0)^4 * (x - x1)^4 / (x1-x0)^8 * 250                   #Sz
                 con_0[i,2] = λ*(con_0[i,1] - e0)
             else
                 con_0[i,1] = e0
@@ -90,9 +90,9 @@ function create_initial_data(name::String, u_i, par)
         c3 = 0.3
         λ = 1. /sqrt(3.)
         for i in 1:M
-            x[i] = dx*(i-1)
-            if x[i] > x0 && x[i] < x1
-                con_0[i,1] = e0 + δe *(x[i] - x0)^4 * (x[i] - x1)^4 / (x1-x0)^8 * 250            #Sz
+            x = dx*(i-1)
+            if x > x0 && x < x1
+                con_0[i,1] = e0 + δe *(x - x0)^4 * (x - x1)^4 / (x1-x0)^8 * 250            #Sz
                 con_0[i,2] = λ*(con_0[i,1] - e0) + s0
             else
                 con_0[i,1] = e0
@@ -116,12 +116,12 @@ function create_initial_data(name::String, u_i, par)
         x30 = 0.1
         #λ = 1. /sqrt(3.)
         for i in 1:M
-            x[i] = dx*(i-1)
-            if x[i] > x0 && x[i] < x1
+            x = dx*(i-1)
+            if x > x0 && x < x1
                 con_0[i,1] = e0
-                con_0[i,3] = x10 *(x[i] - x0)^4 * (x[i] - x1)^4 / (x1-x0)^8 * 250                   #Sz
-                con_0[i,4] = x20 *(x[i] - x0)^4 * (x[i] - x1)^4 / (x1-x0)^8 * 250 
-                con_0[i,5] = x30 *(x[i] - x0)^4 * (x[i] - x1)^4 / (x1-x0)^8 * 250 
+                con_0[i,3] = x10 *(x - x0)^4 * (x - x1)^4 / (x1-x0)^8 * 250                   #Sz
+                con_0[i,4] = x20 *(x - x0)^4 * (x - x1)^4 / (x1-x0)^8 * 250 
+                con_0[i,5] = x30 *(x - x0)^4 * (x - x1)^4 / (x1-x0)^8 * 250 
             end
             con_0[i,1] = e0
             flu_0[i,1] = -1.
