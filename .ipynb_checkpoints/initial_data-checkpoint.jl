@@ -20,7 +20,7 @@ function create_initial_data(name::String, u_i, par)
                 flu_0[i,2] = v0
             end
     
-            flu_0[i,1] = -1.   #
+            flu_0[i,1] = -6.   #
         #flu_0[i,2] = flu_0[i,2] + 0.1  # v
     
         end
