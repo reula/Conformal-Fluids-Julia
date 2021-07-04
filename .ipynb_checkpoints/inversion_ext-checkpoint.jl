@@ -1,53 +1,12 @@
-import Pkg; 
+#import Pkg; 
 #Pkg.activate("Conf_Fluids")
 #Pkg.add("Symbolics")
 using Symbolics
 using StaticArrays
 
-function F(flu,con,χ)    
-    μ = flu[1]  # esto es -μ
-    #μ = view(flu,1)
-    T = μ^(-1/2) # use μ positive, so I changed μ -> -μ
-    v = flu[2]
-    x1 = flu[3]
-    x2 = flu[4]
-    x3 = flu[5]
-    χ₀ = χ[1]
-    χ₁ = χ[2]
-    χ₂ = χ[3]
-    
-    γ = (1 - v^2)^(-1//2)
-    τ = -2χ₁ * x3 * T / (γ*μ^3) - 24χ₂*(1//2*(1-v^2)x3^2 + 14//3 * x2^2 + 7/5*(1-v^2)x1*x3)/μ^5
-    ρ = -6χ₀ / μ^2 - 6χ₁*x1/(γ * μ^4 * T) - 42χ₂*(6//5 *x1^2 + 10γ^2*x2^2 + 3//2*(v^2-1)^2*x3^2)/(μ^5 * γ^2)
-    Q = -10χ₀ * x2 * T / μ^3 - 168χ₂ * x2 * (x1 - (v^2 - 1)x3)/(γ * μ^5)
-
-    A = (-12 * χ₂/μ^4)*[3(2γ^2 - 1)  3v*(6γ^2 - 1)    3v^2 ;
-                v*(6γ^2 - 1)  (6γ^2*(1 + 2v^2) - 1)  v*(v^2 + 2) ;
-                (6γ^2 * v^2 + 1)  v*(6γ^2*(2 + v^2) - 1)  (2v^2 + 1)]
-
-    e = 4//3*ρ*(γ^2 - 1//4) + 2v*γ*Q + v^2*τ
-    s = 4//3*ρ*γ^2*v + (v^2+1//1)γ*Q + v*τ;
-
-    Y1 = -3χ₁*γ/T/μ^3 *(2γ^2 - 1//1)
-    Y2 = -3χ₁*γ/T/μ^3 *v*(6γ^2 - 1//1)
-    Y3 = -3χ₁*γ/T/μ^3 *(6γ^2*v^2 + 1//1)
-    
-    return  [- con[1] + 4//3* ρ*(γ^2 - 1//4) + 2//1* Q*γ*v + τ*v^2;
-             - con[2] + 4//3* ρ*γ^2*v + Q*γ*(v^2 + 1//1) + τ*v;
-             - con[3] + A[1,1]*x1 + A[1,2]*x2 + A[1,3]*x3 + Y1;
-             - con[4] + A[2,1]*x1 + A[2,2]*x2 + A[2,3]*x3 + Y2;
-             - con[5] + A[3,1]*x1 + A[3,2]*x2 + A[3,3]*x3 + Y3]
-end
-
-
-@variables f[1:5], c[1:5], p[1:3]
-
-JS = Symbolics.jacobian(F(f,c,p),f);
-J_exp = Symbolics.build_function(JS, f, c, p);
-Jac = eval(J_exp[1]);
-
-function NR_step!(F, Jac, u0, y, p)
-    u = u0 - Jac(u0,y, p) \ F(u0,y,p)
+function NR_step!(F, Jac, r, u0, y, p)
+#    u = u0 - Jac(u0,y, p) \ F(u0,y,p)
+    u0 = u0 - Jac(r,u0,y, p) \ F(r,u0,y,p)
 end
 
 """
@@ -80,48 +39,29 @@ u0 = zeros(N*M)
 con = view(reshape(u,(M,N)),:,1:5)
 flu = view(reshape(u,(M,N)),:,6:10)
 
-flu[1,:] = [-10.0, 0.2, 1.1, 1.5, 1.2]
-con[1,:] = [0.1366314976448222, 0.07009306769467444, 0.06115332989597844, 0.07178418128379448, 0.04927907295689818]
-
-con0 = view(reshape(u0,(M,N)),:,1:5)
-flu0 = view(reshape(u0,(M,N)),:,6:10)
-
-flu0[1,:] = [-10.0, 0.2, 1.1, 1.5, 1.2] + 0.01 .*rand(N÷2)
-con0[1,:] = [0.1366314976448222, 0.07009306769467444, 0.06115332989597844, 0.07178418128379448, 0.04927907295689818]
-
 @time c_to_f!(u0, p) - u
 
-10-element Array{Float64,1}:
-  0.0
-  0.0
-  0.0
-  0.0
-  0.0
-  4.806112841038157e-9
-  2.941994980965035e-10
- -2.7242426092755068e-9
- -2.2971502477986405e-9
- -1.4237011569662172e-10
+
 ```
 """
 function c_to_f!(u, p)
-    χ, tol, iter_max, N, M = p 
+    χ, tol, iter_max, N, M, F, Jac = p 
     #reshape(u,(N,U))
     tol = tol^2
     con = view(reshape(u,(M,N)),:,1:N÷2)
     flu = view(reshape(u,(M,N)),:,N÷2+1:N)
     for j ∈ 1:M
-        flu[j,1] = -flu[j,1]
+        r = ones(N÷2)
         iter = 1
-        while F(flu[j,:],con[j,:], χ)'*F(flu[j,:],con[j,:], χ) > tol && iter < iter_max
-            flu[j,:] = NR_step!(F, Jac, flu[j,:], con[j,:], χ)
+#        while F(flu[j,:],con[j,:], χ)'*F(flu[j,:],con[j,:], χ) > tol && iter < iter_max # para F que no cambia valores
+        while r'*r > tol && iter < iter_max
+            flu[j,:] = NR_step!(F, Jac, r, flu[j,:], con[j,:], χ)
+#            println(r)
             iter = iter + 1
             if iter == iter_max 
             println("iter_max reached j = $j")
             end
         end
-    #println(iter)
-        flu[j,1] = -flu[j,1]
     end
     return u[:]
 end
@@ -142,51 +82,24 @@ As parameters have:
 # Examples
 ```julia-repl
 julia> 
-N=10
-M=1
-χ = [-1.0; -1.0; -5.0]
-p = (χ, N, M)
-u = zeros(N*M)
-u0 = zeros(N*M)
 
-con = view(reshape(u,(M,N)),:,1:5)
-flu = view(reshape(u,(M,N)),:,6:10)
-
-flu[1,:] = [-10.0, 0.2, 1.1, 1.5, 1.2]
-con[1,:] = [0.1366314976448222, 0.07009306769467444, 0.06115332989597844, 0.07178418128379448, 0.04927907295689818]
-
-con0 = view(reshape(u0,(M,N)),:,1:5)
-flu0 = view(reshape(u0,(M,N)),:,6:10)
-
-flu0[1,:] = [-10.0, 0.2, 1.1, 1.5, 1.2]
-#con0[1,:] = [0.1366314976448222, 0.07009306769467444, 0.06115332989597844, 0.07178418128379448, 0.04927907295689818]
-
-println(u0)
-println(u)
-println(f_to_c!(u0,p) - u)
-println(u0)
-
-[0.0, 0.0, 0.0, 0.0, 0.0, -10.0, 0.2, 1.1, 1.5, 1.2]
-[0.1366314976448222, 0.07009306769467444, 0.06115332989597844, 0.07178418128379448, 0.04927907295689818, -10.0, 0.2, 1.1, 1.5, 1.2]
-[0.0, -1.3877787807814457e-17, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-[0.1366314976448222, 0.07009306769467442, 0.06115332989597844, 0.07178418128379448, 0.04927907295689818, -10.0, 0.2, 1.1, 1.5, 1.2]
 ```
 """
 function f_to_c!(u, p)
-    χ, N, M = p
+    χ, N, M, F= p
     con = view(reshape(u,(M,N)),:,1:N÷2)
     flu = view(reshape(u,(M,N)),:,N÷2+1:N)
     y = zeros(N÷2)
+    yy = zeros(N÷2)
     for j ∈ 1:M
-        flu[j,1] = -flu[j,1]
-        con[j,:] = F(flu[j,:],y, χ)
-        flu[j,1] = -flu[j,1]
+        con[j,:] = F(yy,flu[j,:],y, χ) # versión vieja
+        #F(con[j,:],flu[j,:],y, χ)
     end
     return u[:]
 end
 
 function c_to_f_direct!(u,p)
-    χ, N, M = p
+    N, M = p
     c = view(reshape(u,(M,N)),:,1:N÷2)
     f = view(reshape(u,(M,N)),:,N÷2+1:N)
     
@@ -207,26 +120,50 @@ function c_to_f_direct!(u,p)
     return u[:]
 end
 
-"""
-    split_u!(u,c,f,N,M) NO FUNCIONA!
 
-split in two matrices the vector u according to the sizes given.
-This is a view, not a copy!
 
-    N = number of variables (5x2 here), 
-    M = dimension of vector of variables
 
-# Examples
-```julia-repl
-julia> 
-N=10
-M=1
-
-u = zeros(N*M)
-
-```
-"""
-function split_u!(u,c,f,N,M)
-    c = view(reshape(u,(M,N)),:,1:N÷2)
-    f = view(reshape(u,(M,N)),:,N÷2+1:N)
+function F_alt!(R,flu,con,χ)    
+    T = (abs(flu[1]))^(-1/2) 
+    v = flu[2]
+    ν = flu[3]
+    r1 = flu[4]
+    t11 = flu[5]
+    χ₀ = χ[1]
+    χ₁ = χ[2]
+    χ₂ = χ[3]
+    γ = (1 - v^2)^(-1//2)
+    T00_0 = -8T^4*χ₀*(γ^2 - 1//4)
+    T01_0 = -8T^4*χ₀*γ^2*v
+    T00_1 = χ₁*T^6*(-80//3*T^2*ν*(γ^2 - 1//4) - 20*T*r1*γ*v        - 2*t11*v^2)
+    T01_1 = χ₁*T^6*(-80//3*T^2*ν*γ^2*v        - 10*T*r1*γ*(1+v^2)  - 2*t11*v  )
+     
+    T00_2 = χ₂*T^8*(ν^2*(-560*T^4*(γ^2-1//4)) - ν*r1*T^3*1120v*γ - ν*t11*T^2*112*v^2 
+                    - r1^2*T^2*(315 + 217v^2) 
+                    + r1*t11*T*336*v*γ*(v^2-1) 
+                    + t11^2*(15 - 126v^2 + 111v^4 - 204γ^2 + 408γ^2*v^2 - 204γ^2*v^4)/4)
+    
+    T01_2 = χ₂*T^8*(ν^2*(-560*T^4*γ^2*v) - ν*r1*T^3*560*γ*(1+v^2) + ν*t11*T^2*(-112*v)
+                    - 432r1^2*T^2*v
+                    + r1*t11*T*168*γ*(v^4-1)
+                    + t11^2*v*(24*(v^2-1) - 51*(1-v^2))) 
+    
+    #A000_1 = 3χ₁*T^5*γ*(1 - 2γ^2) OK
+    #A001_1 = χ₁*T^5*γ*v*(1 - 6γ^2)  OK
+    #A011_1 = -χ₁*T^5*γ*(1 + 6γ^2*v^2) OK
+    A000_2 = -12χ₂*(T*10ν*γ*  (2γ^2-1)        + 3r1*v*(6γ^2-1)              + t11*(3v^2*γ/T)   )
+    A001_2 = -12χ₂*(T*10ν*γ*v*(2γ^2-1//3)     + r1*(12γ^2*v^2  + 6γ^2 - 1)  + t11*v*γ/T*(v^2+2))
+    A011_2 = -12χ₂*(T*10ν*γ*  (2γ^2*v^2+1//3) + r1*v*(6γ^2*v^2 + 12γ^2 + 1) + t11*γ/T*(2v^2+1) )
+    R[1] = - con[1] + T00_0 + T00_1 + T00_2
+    R[2] = - con[2] + T01_0 + T01_1 + T01_2
+    R[3] = - con[3] - 3χ₁*T^5*γ*(2γ^2-1)     + A000_2  #A000
+    R[4] = - con[4] -  χ₁*T^5*γ*v*(6γ^2-1)   + A001_2  #A001
+    R[5] = - con[5] -  χ₁*T^5*γ*(6γ^2*v^2+1) + A011_2  #A011
+    return R[:]
 end
+
+@variables f[1:5], c[1:5], p[1:3], r[1:5]
+
+JS_alt = Symbolics.jacobian(F_alt!(r,f,c,p),f);
+J_exp_alt = Symbolics.build_function(JS_alt, r, f, c, p);
+Jac_alt = eval(J_exp_alt[1]);
