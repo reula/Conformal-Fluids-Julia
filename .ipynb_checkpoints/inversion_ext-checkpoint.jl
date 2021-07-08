@@ -166,4 +166,19 @@ end
 
 JS_alt = Symbolics.jacobian(F_alt!(r,f,c,p),f);
 J_exp_alt = Symbolics.build_function(JS_alt, r, f, c, p);
-Jac_alt = eval(J_exp_alt[1]);
+Jf2c = eval(J_exp_alt[1]);
+
+
+function flu_to_abs(flu)
+    T = (abs(flu[1]))^(-1/2) 
+    v = flu[2]
+    ν = flu[3]
+    r1 = flu[4]
+    t11 = flu[5]
+    γ = (1 - v^2)^(-1//2)
+    return [-γ/T^2; -γ*v/T^2; ν/T^2/3*(4γ^2 - 1)-2r1*v*γ/T+t11*v^2; 4/3*γ^2*v*ν/T^2-r1*γ/T*(1 + v^2)+t11*v; (4*γ^2*v^2 + 1)/3*ν/T^2-2r1*v*γ/T+t11]
+end
+
+Jf2a = Symbolics.jacobian(flu_to_abs(f),f);
+Jf2a_exp = Symbolics.build_function(Jf2a, f);
+Jf2a_exp1 = eval(Jf2a_exp[1]);
