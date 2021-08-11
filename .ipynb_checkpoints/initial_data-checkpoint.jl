@@ -47,7 +47,7 @@ function create_initial_data(name::String, u_i, par)
         
     elseif (name == "big_pulse_to_the_right") || (name == "big_pulse_negative_I")
     
-        e0 = 6.; δe = 4.0
+        e0 = 6.; δe = 0.10
         x0 = 0.; x1 = 0.2
         λ = 1. /sqrt(3.)
         for i in 1:M
