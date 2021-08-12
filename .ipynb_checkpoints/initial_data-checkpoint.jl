@@ -9,7 +9,7 @@ function create_initial_data(name::String, u_i, par)
     
 
         x0 = 0.0; x1 = 0.2 #x0 = 0.4; x1 = 0.6
-        v0 = 0.0; δv = 0.1 
+        v0 = 0.0; δv = 0.5
 
         for i in 1:M
             x = dx*(i-1)
@@ -18,10 +18,8 @@ function create_initial_data(name::String, u_i, par)
                 flu_0[i,1] = -6.0 # * sin(pi*(x - x0)/(x1-x0))^4 * sin(2*pi*(x - x0)/(x1-x0))     #By
             else
                 flu_0[i,2] = v0
+                flu_0[i,1] = -6. 
             end
-    
-            flu_0[i,1] = -6.   #
-        #flu_0[i,2] = flu_0[i,2] + 0.1  # v
     
         end
     f_to_c!(u_i, (χ, U, M, F)); # populate the conservative variables from the fluid ones
@@ -47,7 +45,7 @@ function create_initial_data(name::String, u_i, par)
         
     elseif (name == "big_pulse_to_the_right") || (name == "big_pulse_negative_I")
     
-        e0 = 6.; δe = 0.10
+        e0 = 6.; δe = 4.0
         x0 = 0.; x1 = 0.2
         λ = 1. /sqrt(3.)
         for i in 1:M
@@ -59,16 +57,19 @@ function create_initial_data(name::String, u_i, par)
                 con_0[i,1] = e0
                 con_0[i,2] = 0.
             end
-                flu_0[i,1] = -sqrt(con_0[i,1])/6
+                flu_0[i,1] = -1. #-sqrt(con_0[i,1])/6
         end
     
         if !Euler
-            χ_int = [χ[1]; -0.; χ[3]] #primero nos aproximamos a la solución con χ₁=0
-            par_inv = (χ_int, 1e-8, 1000, U, M, F, Jac)
+            println("Enter intermediate step")
+            χ_int = [χ[1]; 0.0; χ[3]] #primero nos aproximamos a la solución con χ₁=0
+            par_inv = (χ_int, 1e-8, 10, U, M, F, Jac)
             u_i = c_to_f!(u_i,par_inv);
+            println("After intermediate step")
             #luego buscamos la buena con la semilla anterior
-            par_inv = (χ, 1e-8, 1000, U, M, F, Jac)
+            par_inv = (χ, 1e-8, 10, U, M, F, Jac)
             u_i = c_to_f!(u_i,par_inv);
+            println("After whole step")
         #check!
             if maximum(abs, f_to_c!(u_i,(χ,U,M,F)) - u_i) > 0.001
             error("Not converging")
