@@ -108,6 +108,28 @@ function create_initial_data(name::String, u_i, par)
         return u_i = c_to_f!(u_i,par_inv);
 
                 
+            elseif name == "square"
+
+        mu0 = -6.; δmu = 1.0
+        x0 = 0.4; x1 = 0.6
+        x10 = 0.0
+        x20 = 0.0
+        x30 = 0.0
+        #λ = 1. /sqrt(3.)
+        for i in 1:M
+            x = dx*(i-1)
+            if x > x0 && x < x1
+                flu_0[i,1] = mu0 + δmu
+                flu_0[i,3] = x10 *(x - x0)^4 * (x - x1)^4 / (x1-x0)^8 * 250                   #Sz
+                flu_0[i,4] = x20 *(x - x0)^4 * (x - x1)^4 / (x1-x0)^8 * 250 
+                flu_0[i,5] = x30 *(x - x0)^4 * (x - x1)^4 / (x1-x0)^8 * 250 
+            else
+            flu_0[i,1] = mu0
+            end
+        end
+    
+        return u_i = f_to_c!(u_i, (χ, U, M, F));
+        
     elseif name == "only_diss"
 
         e0 = 6.; δe = 0.0
