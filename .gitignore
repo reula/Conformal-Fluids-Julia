@@ -17,3 +17,5 @@ Resultados/Movies/zero_sourcebig_pulse_to_the_right_E.gif
 *.gif
 *.gif
 .ipynb_checkpoints/inversion_ext-checkpoint.jl
+.ipynb_checkpoints/Conf_Diss_code-checkpoint.ipynb
+.ipynb_checkpoints/initial_data-checkpoint.jl

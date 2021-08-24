@@ -120,6 +120,7 @@ function create_initial_data(name::String, u_i, par)
             x = dx*(i-1)
             if x > x0 && x < x1
                 flu_0[i,1] = mu0 + δmu
+                flu_0[i,2] = 0.0
                 flu_0[i,3] = x10 *(x - x0)^4 * (x - x1)^4 / (x1-x0)^8 * 250                   #Sz
                 flu_0[i,4] = x20 *(x - x0)^4 * (x - x1)^4 / (x1-x0)^8 * 250 
                 flu_0[i,5] = x30 *(x - x0)^4 * (x - x1)^4 / (x1-x0)^8 * 250 
