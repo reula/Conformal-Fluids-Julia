@@ -130,3 +130,44 @@ function Speed_max(u, par_flux)
     χ = par_flux
     return 1. #para revisar.... debiera ser una función de varias cosas... 
 end
+
+
+
+function Initialize_data!(u,du,par,JA)
+    #u field variables 1:U
+    #du x_derivatives of [u[1],u[2]]
+    #JA jacobian of A, defined below in this file
+    χ, ξ, N, M = par #only used to test otherwise are defined below. a is and amplitude to change I from outside
+    #Is = zeros(10)
+    #flu = u[6:end]
+    flu = view(reshape(u,(M,N)),:,N÷2+1:N)
+    
+    for j ∈ 1:M
+        μ = flu[j,1] 
+        T = (abs(μ))^(-1//2) # use μ positive, so I changed μ -> -μ
+        v = flu[j,2]
+        γ = (1 - v^2)^(-1//2)
+        M =  [-(γ^2    -1//4)*γ*T*ξ[1]        2γ*v*ξ[2]/T       -μ*v^2*γ*T*ξ[3]
+              -(γ^2*v  + 0  )*γ*T*ξ[1]        γ*(v^2+1)*ξ[2]/T  -μ*v*γ*T*ξ[3]
+              -(γ^2*v^2+1//4)*γ*T*ξ[1]        2γ*v*ξ[2]/T       -μ*γ*T*ξ[3]]/μ^5
+        flu[j,3:5] = M \ JA(flu[j,1:2],χ)*du[j,:]
+    end
+end
+
+function A(f_r,par)
+    #f_r = u[6:7] # restricted
+    χ = par 
+    χ₁ = χ[2]
+    Is = zeros(10)
+    #flu = u[6:end]
+    μ = f_r[1] 
+    T = (abs(μ))^(-1//2) # use μ positive, so I changed μ -> -μ
+    v = f_r[2]
+    γ = (1 - v^2)^(-1//2)
+    return [χ₁*T^5*γ*v*(1 - 6γ^2);-χ₁*T^5*γ*(1 + 6γ^2*v^2) ;-3χ₁*γ*v*T^5*(2γ^2*v^2+1)]
+end
+
+@variables f[1:2], p[1:3] 
+JAS = Symbolics.jacobian(A(f,p),f);
+JA_exp = Symbolics.build_function(JAS,f,p);
+JA = eval(JA_exp[1]);

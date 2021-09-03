@@ -1,11 +1,11 @@
 function create_initial_data(name::String, u_i, par)
-    χ, U, M, dx, Euler, F, Jac = par
+    χ, ξ, U, M, dx, Euler, F, Jac, JA, Initialize_data! = par
     
 #    u_i=zeros(M*U)
     con_0 = view(reshape(u_i,(M,U)),:,1:U÷2)
     flu_0 = view(reshape(u_i,(M,U)),:,U÷2+1:U)
 
-    if name == "speed_pulse"
+    if name == "speed_pulse" 
     
 
         x0 = 0.0; x1 = 0.2 #x0 = 0.4; x1 = 0.6
@@ -24,6 +24,30 @@ function create_initial_data(name::String, u_i, par)
         end
     f_to_c!(u_i, (χ, U, M, F)); # populate the conservative variables from the fluid ones
 
+        
+    elseif name == "speed_pulse_initialized"
+    
+
+        x0 = 0.0; x1 = 0.2 #x0 = 0.4; x1 = 0.6
+        μ0 = -6;  
+        v0 = 0.0; δv = 0.5
+        df = zeros(M,2)
+        for i in 1:M
+            x = dx*(i-1)
+            if x > x0 && x < x1
+                flu_0[i,2] = v0 + δv *(x - x0)^4 * (x - x1)^4 / (x1-x0)^8 * 250
+                df[i,2]    = δv *4*((x - x0)^3 * (x - x1)^4 + (x - x0)^4 * (x - x1)^3) / (x1-x0)^8 * 250
+                flu_0[i,1] = μ0# * sin(pi*(x - x0)/(x1-x0))^4 * sin(2*pi*(x - x0)/(x1-x0))     
+            else
+                flu_0[i,2] = v0
+                flu_0[i,1] = μ0
+            end
+        
+        end
+    
+    Initialize_data!(u_i,df,(χ,ξ,U,M),JA)
+    f_to_c!(u_i, (χ, U, M, F)); # populate the conservative variables from the fluid ones
+            
     elseif name == "small_pulse_to_the_right"
 
         e0 = 6.; δe = 0.1
