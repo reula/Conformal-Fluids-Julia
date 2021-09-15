@@ -25,6 +25,27 @@ function create_initial_data(name::String, u_i, par)
     f_to_c!(u_i, (χ, U, M, F)); # populate the conservative variables from the fluid ones
 
         
+    elseif name == "big_fluid_pulse" 
+    
+
+        x0 = 0.0; x1 = 0.2 #x0 = 0.4; x1 = 0.6
+        v0 = 0.0; δv = 0.0
+        μ0 = -6.0; δμ = 5.0
+        
+
+        for i in 1:M
+            x = dx*(i-1)
+            if x > x0 && x < x1
+                flu_0[i,2] = v0 + δv *(x - x0)^4 * (x - x1)^4 / (x1-x0)^8 * 250         
+                flu_0[i,1] = μ0 + δμ *(x - x0)^4 * (x - x1)^4 / (x1-x0)^8 * 250
+            else
+                flu_0[i,2] = v0
+                flu_0[i,1] = μ0 
+            end
+    
+        end
+    f_to_c!(u_i, (χ, U, M, F)); # populate the conservative variables from the fluid ones
+    
     elseif name == "speed_pulse_initialized"
     
 
