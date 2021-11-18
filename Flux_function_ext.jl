@@ -92,9 +92,9 @@ function Is!(sourcevec,u,t,par)
     T = (abs(μ))^(-1//2) # use μ positive, so I changed μ -> -μ
     v = flu[2]
     γ = (1 - v^2)^(-1//2)
-    x1 = γ*T*flu[3]
+    x1 = flu[3] #γ*T*flu[3]
     x2 = flu[4]
-    x3 = γ/T*flu[5]
+    x3 = flu[5] #γ/T*flu[5]
     sourcevec[1] = 0.0
     sourcevec[2] = 0.0
     sourcevec[3] = (-(γ^2    -1//4)*x1*ξ[1]        + 2γ*v*x2*ξ[2]/T      - μ*v^2*x3*ξ[3])/μ^5;
