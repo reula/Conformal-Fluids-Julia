@@ -198,6 +198,21 @@ function Φ(ζ,p)
 end
     
 
+function Φ_new(ζ,p)
+    #χ = zeros(3)
+    χs, gs = p
+    χ = Symbolics.scalarize(χs)
+    g = Symbolics.scalarize(gs)
+    #D = length(g[:,1])
+    μ = mu(Symbolics.scalarize(ζ))
+    ν = nu(Symbolics.scalarize(ζ))
+    𝚶 = omicron(Symbolics.scalarize(ζ))
+    τ₂= tau2(Symbolics.scalarize(ζ))
+    D1 = D//2+1
+    D2 = D//2+2
+    return χ[1]*μ^(1-D//2) + χ₁*ν*μ^(-1-D//2) + χ₂*(τ₂ - 4*D1*𝚶*μ^(-1) + 2*D1*D2*ν^2*μ^(-2))*μ^(-1-D//2) 
+end
+
 function get_dim(N)
     DD = (-3 + sqrt(9+8N))/2 
     if DD % 1 ≈ 0
@@ -214,22 +229,72 @@ function mu(v)
     return v[1:D]' * g * v[1:D]
 end
 
-function lambda(v)
-    D = get_dim(length(v))
-    g = make_g(D)
-    return v[1:D]' * g * v[D+1:end]
-end
+
 
 #"""
 #trasnforms indices of a MxM symmetric matrix into a vector index
 #"""
-l_ind(i::Int64,j::Int64,M::Int64)::Int64
+function l_ind(i::Int64,j::Int64,M::Int64)::Int64
     if i <= j 
     return Int64((i-1)*M - (i-1)*i÷2 + j)
     else
     return Int64((j-1)*M - (j-1)*j÷2 + i)
+    end
 end
 
 
+function omicron(v)
+    D = get_dim(length(v))
+    g = make_g(D)
+    sum = 0
+    for i in 1:D 
+        for j in 1:D 
+            for k in 1:D
+                for l in 1:D
+                    for n in 1:D
+                        for m in 1:D
+                            #v_l g^{lk} z_{kj} g^{ji} z_{in} g^{nm} v_m
+                            sum = sum + v[l]*g[l,k]*v[D+l_ind(k,j,D)]*g[j,i]*v[D+l_ind(i,n,D)]*g[n,m]*v[m]
+                        end
+                    end
+                end
+            end
+        end
+    end
+    return sum
+end
 
+function nu(v)
+    D = get_dim(length(v))
+    g = make_g(D)
+    sum = 0
+    for i in 1:D 
+        for j in 1:D 
+            for k in 1:D
+                for l in 1:D
+                    #v_{i}g^{ij}z{jk}g^{kl}v_{l}    
+                    sum = sum + v[i]*g[i,j]*v[D+l_ind(j,k,D)]*g[k,l]*v[l]
+                end
+            end
+        end
+    end
+    return sum
+end
+    
+
+function tau2(v)
+    D = get_dim(length(v))
+    g = make_g(D)
+    sum = 0
+    for i in 1:D 
+        for j in 1:D 
+            for k in 1:D
+                for l in 1:D
+                    sum = sum + g[l,j]*v[D+l_ind(l,k,D)]*g[k,i]*v[D+l_ind(i,j,D)]
+                end
+            end
+        end
+    end
+    return sum
+end
 
