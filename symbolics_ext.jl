@@ -74,7 +74,8 @@ function vector_unpack(ζ)
     else
         error("In function vector_unpack: the vector dimension does not corresponds to the number of free entries of a symmetric matrix N = $N, D = $DD")
     end
-    return Symbolics.scalarize(ζ)[1:D], vector2symmat(Symbolics.scalarize(ζ)[D+1:end])[:,:]
+    #return Symbolics.scalarize(ζ)[1:D], vector2symmat(Symbolics.scalarize(ζ)[D+1:end])[:,:]
+    return ζ[1:D], vector2symmat(ζ[D+1:end])[:,:]
 end
 
 #vector_unpack(rand(14))
@@ -162,21 +163,22 @@ function Φ_vt(ζ_v, ζ_s, p)
     τ₂= tr(Symbolics.scalarize(ζ_s)*g'*Symbolics.scalarize(ζ_s)*g)
     D1 = D//2+1
     D2 = D//2+2
-    return χ₀*μ^(1-D//2) + χ₁*ν*μ^(-1-D//2) + χ₂*(τ₂ - 4*D1*𝚶*μ^(-1) + 2*D1*D2*ν^2*μ^(-2))*μ^(-1-D//2) 
+    return (χ₀*μ^2 + χ₁*ν + χ₂*(τ₂ - 4*D1*𝚶*μ^(-1) + 2*D1*D2*ν^2*μ^(-2)))*μ^(-D1) 
     # the function seems to be correct: tr(g*T)=0 and also A is fully symmetric after symmetrization 
     # on first two indices
     #return 𝚶
 end
 
 function Φ_v(ζ,p)
-    ζ_v, ζ_t = vector_unpack(ζ)
-    #ζ_t = vector2symmat(ζ[D+1:end])
-    #return Φ_vt(ζ[1:D], ζ_t, p)
-    return Φ_vt(ζ_v, ζ_t, p)
+    #ζ_v, ζ_t = vector_unpack(ζ)
+    get_dim(ζ)
+    ζ_t = vector2symmat(ζ[D+1:end])
+    return Φ_vt(ζ[1:D], ζ_t, p)
+    #return Φ_vt(ζ_v, ζ_t, p)
 end
 
-Φ_vt(ζ_v,ζ_t, [1.,1.,1.])#, ζ_t, [1.;1;1])
-Φ_v(ζ, [1.,1.,1.])
+#Φ_vt(ζ_v,ζ_t, [1.,1.,1.])#, ζ_t, [1.;1;1])
+#Φ_v(ζ, [1.,1.,1.])
 #ζ_v
 
 function Φ(ζ,p)
@@ -200,9 +202,9 @@ end
 
 function Φ_new(ζ,p)
     #χ = zeros(3)
-    χs, gs = p
+    χs = p
     χ = Symbolics.scalarize(χs)
-    g = Symbolics.scalarize(gs)
+    #g = Symbolics.scalarize(gs)
     #D = length(g[:,1])
     μ = mu(Symbolics.scalarize(ζ))
     ν = nu(Symbolics.scalarize(ζ))
@@ -210,7 +212,7 @@ function Φ_new(ζ,p)
     τ₂= tau2(Symbolics.scalarize(ζ))
     D1 = D//2+1
     D2 = D//2+2
-    return χ[1]*μ^(1-D//2) + χ₁*ν*μ^(-1-D//2) + χ₂*(τ₂ - 4*D1*𝚶*μ^(-1) + 2*D1*D2*ν^2*μ^(-2))*μ^(-1-D//2) 
+    return (χ[1]*μ^2 + χ[2]*ν + χ[3]*(τ₂ - 4*D1*𝚶*μ^(-1) + 2*D1*D2*ν^2*μ^(-2)))*μ^(-D1) 
 end
 
 function get_dim(N)
@@ -226,7 +228,15 @@ end
 function mu(v)
     D = get_dim(length(v))
     g = make_g(D)
-    return v[1:D]' * g * v[1:D]
+    sum = 0
+    for i in 1:D 
+        for j in 1:D 
+                            #v_l g^{lk}v_k
+                            sum = sum + v[i]*g[i,j]*v[j]
+        end
+    end
+    return sum
+    #return v[1:D]' * g * v[1:D]
 end
 
 
@@ -298,3 +308,39 @@ function tau2(v)
     return sum
 end
 
+function χaA(O, vars_a, vars_A; simplify=false)
+    vars_a = map(Symbolics.value, vars_a)
+    vars_A = map(Symbolics.value, vars_A)
+    first_derivs = map(Symbolics.value, vec(Symbolics.jacobian([Symbolics.values(O)], vars_a, simplify=simplify)))
+    n = length(vars_a) #D
+    m = length(vars_A) #L
+    H = Array{Num, 2}(undef,(n, m))
+    fill!(H, 0)
+    for i=1:m
+        for j=1:n
+            H[j, i] = Symbolics.expand_derivatives(Symbolics.Differential(vars_A[i])(first_derivs[j]))
+        end
+    end
+    H
+end
+
+function χ0AB(O, vars_A; simplify=false)
+    #vars_0 = map(Symbolics.value, vars_0)
+    vars_A = map(Symbolics.value, vars_A)
+    first_derivs = map(Symbolics.value, vec(Symbolics.jacobian([Symbolics.values(O)], vars_A, simplify=simplify)))
+    m = length(vars_A) #L
+    H = Array{Num, 2}(undef,(m, m))
+    H0 = Array{Num, 2}(undef,(m, m))
+    fill!(H, 0)
+    for i=1:m
+        for j=1:i
+            H[j, i] = H[i,j] = Symbolics.expand_derivatives(Symbolics.Differential(vars_A[i])(first_derivs[j]))
+        end
+    end
+    for i=1:m
+        for j=1:i
+            H0[j, i] = H0[i,j] = Symbolics.expand_derivatives(Symbolics.Differential(vars_A[1])(H[j,i]))
+        end
+    end
+    H0
+end
