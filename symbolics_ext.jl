@@ -1,3 +1,6 @@
+"""
+Makes a flat Minkovski metric in D dimensions diagonal(-1,1,1,...,1) 
+"""
 function make_g(D)
     u = ones(D)
     u[1] = -1.0
@@ -8,6 +11,11 @@ end
 #latexify(g)
 #typeof(g)
 
+"""
+takes a vector and builds a symmetric matrix out of part of it.
+The vector is a collect of (zeta_a, zeta_{ab} = zeta_{ba}). 
+It has dimensions of D + D*(D+1)/2, where D is the space-time dimension.
+"""
 function vector2symmat!(v,sm)
     M = length(sm[1,:]) # N = M*(M+1)/2 
     N = length(v)
@@ -25,8 +33,11 @@ function vector2symmat!(v,sm)
 end
 
 
-
-
+"""
+takes a symmetric matrix and transform into a vector of components.
+The vector is a collect of (zeta_{ab} = zeta_{ba}). 
+It has dimensions of D*(D+1)/2, where D is the space-time dimension.
+"""
 function symmat2vector(sm)
     M = length(sm[1,:])
     N = M*(M+1)÷2
@@ -41,7 +52,11 @@ function symmat2vector(sm)
     return v
 end
 
-
+"""
+takes a vector and builds a symmetric matrix out of part of it.
+The vector is a collect of (zeta_a, zeta_{ab} = zeta_{ba}). 
+It has dimensions of D + D*(D+1)/2, where D is the space-time dimension.
+"""
 function vector2symmat(v)
     N = length(v)
     MM = (-1 + sqrt(1+8N))/2 
@@ -65,7 +80,11 @@ function vector2symmat(v)
     return sm
 end
 
-
+"""
+takes a long vector and builds a vector and a symmetric matrix out of it.
+The vector is a collect of (zeta_a, zeta_{ab} = zeta_{ba}). 
+It has dimensions of D + D*(D+1)/2, where D is the space-time dimension.
+"""
 function vector_unpack(ζ)
     N = length(Symbolics.scalarize(ζ)) # N = D + D*(D+1)/2
     DD = (-3 + sqrt(9+8N))/2 
@@ -81,6 +100,9 @@ end
 #vector_unpack(rand(14))
 #vector_unpack(rand(5))
 
+"""
+takes an upper triangular matrix and completes is into a symmetric matrix
+"""
 function upper2symm!(s)
         M = length(s[:,1])
         for i ∈ 1:M
@@ -90,6 +112,9 @@ function upper2symm!(s)
         end
 end
 
+"""
+takes an upper triangular matrix and completes is into a symmetric matrix
+"""
 function upper2symm(s)
         ss = copy(s)
         M = length(s[:,1])
@@ -101,6 +126,9 @@ function upper2symm(s)
         return ss[:,:]
 end
 
+"""
+Symmetric part of a matrix. It takes a tensor of type (D,D,D) and symmetrizes the first two indices
+"""
 function symm_A(AA)
     AS = zeros(D,D,D)
     for k ∈ 1:D
@@ -113,6 +141,9 @@ function symm_A(AA)
     return AS[:,:,:]
 end
 
+"""
+takes the trace of a tensor of type (D,D,D) with respecto to its first two indices and uses the matrix g to do it.
+"""
 function tr_A_12(A,g)
     D = length(A[1,1,:])
     TrAS = zeros(D)
@@ -122,6 +153,9 @@ function tr_A_12(A,g)
     return TrAS[:]
 end
 
+"""
+takes the trace of a tensor of type (D,D,D) with respecto to its first and last indices and uses the matrix g to do it.
+"""
 function tr_A_13(A,g)
     D = length(A[1,1,:])
     TrAS = zeros(D)
@@ -135,6 +169,9 @@ function tr_A_13(A,g)
     return TrAS[:]
 end
 
+"""
+makes a tensor of type (D,D,D) g-trace free.
+"""
 function STF_A(A,g)
     D = length(A[1,1,:])
     A_STF = zeros(D,D,D)
@@ -145,6 +182,9 @@ function STF_A(A,g)
     return A_STF[:,:,:]
 end
 
+"""
+checks the symmetries of a tensor of type (D,D,D)
+"""
 function full_symmetry_check(A)
     D = length(A[1,1,:])
     E = 0
@@ -158,6 +198,9 @@ function full_symmetry_check(A)
     return E
 end
 
+"""
+out of a tensor of type (D,L=D + D*(D+1)/2) gets a tensor of type (D,D,D)
+"""
 function get_A(FaA)
     D = length(FaA[:,1])
     A = zeros(D,D,D)
@@ -166,6 +209,61 @@ function get_A(FaA)
     end
     return A[:,:,:]
 end
+
+"""
+out of a tensor of type (D,L=D + D*(D+1)/2) gets a tensor of type (D,D)
+"""
+function get_T(FaA)
+    D = length(FaA[:,1])
+    return FaA[1:D,1:D]
+end
+
+"""
+given the dimension of a long vector of N = D + D*(D+1)/2 return D
+"""
+function get_dim(N)
+    DD = (-3 + sqrt(9+8N))/2 
+    if DD % 1 ≈ 0
+        return D = Int64(DD)
+    else
+        error("In function get_dim: the vector dimension does not corresponds to the number of free entries of a symmetric matrix N = $N, D = $DD")
+    end
+end
+
+"""
+to correct the vector derivative with respect to the long vectors we need to divide by 2 all the non-diagonal entries.
+"""
+function dd(i,j)
+    return (i==j) ? 1 : 0.5
+end
+
+"""
+trasnforms indices of a MxM symmetric matrix into a vector index
+"""
+function l_ind(i::Int64,j::Int64,M::Int64)::Int64
+    if i <= j 
+    return Int64((i-1)*M - (i-1)*i÷2 + j)
+    else
+    return Int64((j-1)*M - (j-1)*j÷2 + i)
+    end
+end
+
+"""
+transform a long vector so that the corresponding symmetric matrix is trace-free.
+"""
+function make_vector_TF!(v)
+    D = get_dim(length(v))
+    T = -v[D + l_ind(1,1,D)]
+    for k in 2:D
+        T = T + v[D + l_ind(k,k,D)]
+    end
+    v[D + l_ind(1,1,D)] = v[D + l_ind(1,1,D)] + T/D
+    for k in 2:D
+        v[D + l_ind(k,k,D)] = v[D + l_ind(k,k,D)] - T/D
+    end
+    return v[:]
+end
+
 
 # Functions
 
@@ -211,16 +309,18 @@ function Φ(ζ,p)
     ζ_v, ζ_t = vector_unpack(ζ)
     μ = Symbolics.scalarize(ζ_v' * gs * ζ_v)
     #μ = Symbolics.scalarize(ζ_v)'*Symbolics.scalarize(gs)*Symbolics.scalarize(ζ_v)
-    #ν = (g*Symbolics.scalarize(ζ_v))'*Symbolics.scalarize(ζ_s)*Symbolics.scalarize(g*ζ_v)
-    #l = Symbolics.scalarize(ζ_s)*Symbolics.scalarize(g*ζ_v)
-    #𝚶 = l'* g * l
-    #τ₂= tr(Symbolics.scalarize(ζ_s)*g'*Symbolics.scalarize(ζ_s)*g)
+    ν = (g*Symbolics.scalarize(ζ_v))'*Symbolics.scalarize(ζ_s)*Symbolics.scalarize(g*ζ_v)
+    l = Symbolics.scalarize(ζ_s)*Symbolics.scalarize(g*ζ_v)
+    𝚶 = l'* g * l
+    τ₂= tr(Symbolics.scalarize(ζ_s)*g'*Symbolics.scalarize(ζ_s)*g)
     D1 = D//2+1
     D2 = D//2+2
     return χ[1]*μ^(1-D//2)# + χ₁*ν*μ^(-1-D//2) + χ₂*(τ₂ - 4*D1*𝚶*μ^(-1) + 2*D1*D2*ν^2*μ^(-2))*μ^(-1-D//2) 
 end
     
-
+"""
+This is the chi function we are using at the moment.
+"""
 function Φ_new(ζ,p)
     #χ = zeros(3)
     χs = p
@@ -234,47 +334,15 @@ function Φ_new(ζ,p)
     D1 = D//2+1
     D2 = D//2+2
     if D > 2
-        return (χ[1]*μ^2 + χ[2]*ν + χ[3]*(τ₂ - 4*D1*𝚶*μ^(-1) + 2*D1*D2*ν^2*μ^(-2)))*μ^(-D1) 
+        if D%2 == 0
+            return (χ[1]*μ^2 + χ[2]*ν + χ[3]*(τ₂ - 4*D1*𝚶*μ^(-1) + 2*D1*D2*ν^2*μ^(-2)))*μ^(-D1) 
+        else
+            # using abs() we are effectively changing the constants to absorve a complex fase.
+            return (χ[1]*μ^2 + χ[2]*ν + χ[3]*(τ₂ - 4*D1*𝚶*μ^(-1) + 2*D1*D2*ν^2*μ^(-2)))*abs(μ)^(-D1) 
+        end
     elseif D==2 
-        return χ[1]*μ*log(μ) + (χ[2]*ν + χ[3]*(τ₂ - 4*D1*𝚶*μ^(-1) + 2*D1*D2*ν^2*μ^(-2)))*μ^(-D1)
+        return χ[1]*log(abs(μ)) + (χ[2]*ν + χ[3]*(τ₂ - 4*D1*𝚶*μ^(-1) + 2*D1*D2*ν^2*μ^(-2)))*μ^(-D1)
     end
-end
-
-function get_dim(N)
-    DD = (-3 + sqrt(9+8N))/2 
-    if DD % 1 ≈ 0
-        return D = Int64(DD)
-    else
-        error("In function vector_unpack: the vector dimension does not corresponds to the number of free entries of a symmetric matrix N = $N, D = $DD")
-    end
-end
-
-function dd(i,j)
-    return (i==j) ? 1 : 0.5
-end
-
-#"""
-#trasnforms indices of a MxM symmetric matrix into a vector index
-#"""
-function l_ind(i::Int64,j::Int64,M::Int64)::Int64
-    if i <= j 
-    return Int64((i-1)*M - (i-1)*i÷2 + j)
-    else
-    return Int64((j-1)*M - (j-1)*j÷2 + i)
-    end
-end
-
-function make_vector_TF!(v)
-    D = get_dim(length(v))
-    T = -v[D + l_ind(1,1,D)]
-    for k in 2:D
-        T = T + v[D + l_ind(k,k,D)]
-    end
-    v[D + l_ind(1,1,D)] = v[D + l_ind(1,1,D)] + T/D
-    for k in 2:D
-        v[D + l_ind(k,k,D)] = v[D + l_ind(k,k,D)] - T/D
-    end
-    return v[:]
 end
 
     
@@ -330,7 +398,6 @@ function nu(v)
     return sum
 end
     
-
 function tau2(v)
     D = get_dim(length(v))
     g = make_g(D)
@@ -348,6 +415,9 @@ function tau2(v)
     return sum
 end
 
+"""
+takes a derivative with respect to a short vector and a long vector. Takes out the trace and also corrects the derivative vector.
+"""
 function χaA(O, vars_a, vars_A; simplify=true)
     vars_a = map(Symbolics.value, vars_a)
     vars_A = map(Symbolics.value, vars_A)
@@ -371,6 +441,7 @@ function χaA(O, vars_a, vars_A; simplify=true)
         for k=2:n
             H[j,n+l_ind(k,k,n)] = H[j,n+l_ind(k,k,n)] - T/n
         end
+        # correct derivative vector 
         for k=1:n
             for l=1:k
                 H[j,n+l_ind(k,l,n)] = H[j,n+l_ind(k,l,n)]*dd(k,l)
@@ -380,6 +451,10 @@ function χaA(O, vars_a, vars_A; simplify=true)
     H
 end
 
+"""
+takes two derivative with respect to a long vector and derivative along the first component. 
+Takes out the traces and also corrects the derivative vector.
+"""
 function χ0AB(O, vars_A; simplify=true)
     #vars_0 = map(Symbolics.value, vars_0)
     vars_A = map(Symbolics.value, vars_A)
@@ -398,6 +473,12 @@ function χ0AB(O, vars_A; simplify=true)
     for k=2:n
         first_derivs[n+l_ind(k,k,n)] = first_derivs[n+l_ind(k,k,n)] - T/n
     end
+    #correct derivative vector 
+    for k=1:n
+        for l=1:k
+            first_derivs[n+l_ind(k,l,n)] = first_derivs[n+l_ind(k,l,n)]*dd(k,l)
+        end
+    end
     #take second derivative
     for j=1:m
         for i=1:m
@@ -412,6 +493,12 @@ function χ0AB(O, vars_A; simplify=true)
         for k=2:n
             H[j,n+l_ind(k,k,n)] = H[j,n+l_ind(k,k,n)] - T/n
         end
+        # correct derivative vector 
+        for k=1:n
+            for l=1:k
+                H[j,n+l_ind(k,l,n)] = H[j,n+l_ind(k,l,n)]*dd(k,l)
+            end
+        end
     end
     
 
@@ -421,4 +508,60 @@ function χ0AB(O, vars_A; simplify=true)
         end
     end
     H0
+end
+
+function χaAB(O, vars_A; simplify=true)
+    #vars_0 = map(Symbolics.value, vars_0)
+    vars_A = map(Symbolics.value, vars_A)
+    first_derivs = map(Symbolics.value, vec(Symbolics.jacobian([Symbolics.values(O)], vars_A, simplify=simplify)))
+    m = length(vars_A) #L
+    n = get_dim(m)
+    H = Array{Num, 2}(undef,(m, m))
+    Ha = Array{Num, 3}(undef,(m, m, n))
+    fill!(H, 0)
+    #take out the trace 
+    T = - first_derivs[n+l_ind(1,1,n)]
+    for k=2:n
+        T = T + first_derivs[n+l_ind(k,k,n)]
+    end
+    first_derivs[n+l_ind(1,1,n)] = first_derivs[n+l_ind(1,1,n)] + T/n
+    for k=2:n
+        first_derivs[n+l_ind(k,k,n)] = first_derivs[n+l_ind(k,k,n)] - T/n
+    end
+    #correct derivative vector 
+    for k=1:n
+        for l=1:k
+            first_derivs[n+l_ind(k,l,n)] = first_derivs[n+l_ind(k,l,n)]*dd(k,l)
+        end
+    end
+    #take second derivative
+    for j=1:m
+        for i=1:m
+            H[j, i] = Symbolics.expand_derivatives(Symbolics.Differential(vars_A[i])(first_derivs[j]))
+        end
+        #take out the trace of the second index
+        T = - H[j,n+l_ind(1,1,n)]
+        for k=2:n
+            T = T + H[j,n+l_ind(k,k,n)]
+        end
+        H[j,n+l_ind(1,1,n)] = H[j,n+l_ind(1,1,n)] + T/n
+        for k=2:n
+            H[j,n+l_ind(k,k,n)] = H[j,n+l_ind(k,k,n)] - T/n
+        end
+        # correct derivative vector 
+        for k=1:n
+            for l=1:k
+                H[j,n+l_ind(k,l,n)] = H[j,n+l_ind(k,l,n)]*dd(k,l)
+            end
+        end
+    end
+    
+    for k in 1:n
+        for i=1:m
+            for j=1:i
+                Ha[j, i, k] = Ha[i, j, k] = Symbolics.expand_derivatives(Symbolics.Differential(vars_A[k])(H[j,i]))
+            end
+        end
+    end
+    Ha
 end
