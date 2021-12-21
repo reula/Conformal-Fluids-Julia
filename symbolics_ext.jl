@@ -113,11 +113,24 @@ function symm_A(AA)
     return AS[:,:,:]
 end
 
-function tr_A(A,g)
+function tr_A_12(A,g)
     D = length(A[1,1,:])
     TrAS = zeros(D)
     for k ∈ 1:D
         TrAS[k] = tr(g*A[:,:,k])
+    end
+    return TrAS[:]
+end
+
+function tr_A_13(A,g)
+    D = length(A[1,1,:])
+    TrAS = zeros(D)
+    for k ∈ 1:D
+        for i in 1:D
+            for j in 1:D
+                TrAS[k] += g[i,j]*A[i,k,j]
+            end
+        end
     end
     return TrAS[:]
 end
@@ -138,13 +151,21 @@ function full_symmetry_check(A)
     for i ∈ 1:D
         for j ∈ 1:D
             for k ∈ 1:D
-                E = E = abs(A[i,j,k] - A[j,i,k]) + abs(A[i,j,k] - A[k,j,i])
+                E = E + abs(A[i,j,k] - A[j,i,k]) + abs(A[i,j,k] - A[k,j,i])
             end
         end
     end
     return E
 end
 
+function get_A(FaA)
+    D = length(FaA[:,1])
+    A = zeros(D,D,D)
+    for i in 1:D
+        A[:,:,i] = vector2symmat(FaA[i,D+1:end])
+    end
+    return A[:,:,:]
+end
 
 # Functions
 
@@ -212,7 +233,11 @@ function Φ_new(ζ,p)
     τ₂= tau2(Symbolics.scalarize(ζ))
     D1 = D//2+1
     D2 = D//2+2
-    return (χ[1]*μ^2 + χ[2]*ν + χ[3]*(τ₂ - 4*D1*𝚶*μ^(-1) + 2*D1*D2*ν^2*μ^(-2)))*μ^(-D1) 
+    if D > 2
+        return (χ[1]*μ^2 + χ[2]*ν + χ[3]*(τ₂ - 4*D1*𝚶*μ^(-1) + 2*D1*D2*ν^2*μ^(-2)))*μ^(-D1) 
+    elseif D==2 
+        return χ[1]*μ*log(μ) + (χ[2]*ν + χ[3]*(τ₂ - 4*D1*𝚶*μ^(-1) + 2*D1*D2*ν^2*μ^(-2)))*μ^(-D1)
+    end
 end
 
 function get_dim(N)
@@ -224,22 +249,9 @@ function get_dim(N)
     end
 end
 
-    
-function mu(v)
-    D = get_dim(length(v))
-    g = make_g(D)
-    sum = 0
-    for i in 1:D 
-        for j in 1:D 
-                            #v_l g^{lk}v_k
-                            sum = sum + v[i]*g[i,j]*v[j]
-        end
-    end
-    return sum
-    #return v[1:D]' * g * v[1:D]
+function dd(i,j)
+    return (i==j) ? 1 : 0.5
 end
-
-
 
 #"""
 #trasnforms indices of a MxM symmetric matrix into a vector index
@@ -252,6 +264,33 @@ function l_ind(i::Int64,j::Int64,M::Int64)::Int64
     end
 end
 
+function make_vector_TF!(v)
+    D = get_dim(length(v))
+    T = -v[D + l_ind(1,1,D)]
+    for k in 2:D
+        T = T + v[D + l_ind(k,k,D)]
+    end
+    v[D + l_ind(1,1,D)] = v[D + l_ind(1,1,D)] + T/D
+    for k in 2:D
+        v[D + l_ind(k,k,D)] = v[D + l_ind(k,k,D)] - T/D
+    end
+    return v[:]
+end
+
+    
+function mu(v)
+    D = get_dim(length(v))
+    g = make_g(D)
+    sum = 0
+    for i in 1:D 
+        for j in 1:D 
+                #v_l g^{lk}v_k
+                sum = sum + v[i]*g[i,j]*v[j]
+        end
+    end
+    return sum
+    #return v[1:D]' * g * v[1:D]
+end
 
 function omicron(v)
     D = get_dim(length(v))
@@ -300,6 +339,7 @@ function tau2(v)
         for j in 1:D 
             for k in 1:D
                 for l in 1:D
+                    #g^{lj} * z_{lk} * g^{ki} * z{ij}
                     sum = sum + g[l,j]*v[D+l_ind(l,k,D)]*g[k,i]*v[D+l_ind(i,j,D)]
                 end
             end
@@ -308,7 +348,7 @@ function tau2(v)
     return sum
 end
 
-function χaA(O, vars_a, vars_A; simplify=false)
+function χaA(O, vars_a, vars_A; simplify=true)
     vars_a = map(Symbolics.value, vars_a)
     vars_A = map(Symbolics.value, vars_A)
     first_derivs = map(Symbolics.value, vec(Symbolics.jacobian([Symbolics.values(O)], vars_a, simplify=simplify)))
@@ -316,27 +356,65 @@ function χaA(O, vars_a, vars_A; simplify=false)
     m = length(vars_A) #L
     H = Array{Num, 2}(undef,(n, m))
     fill!(H, 0)
-    for i=1:m
-        for j=1:n
+    for j=1:n
+        for i=1:m
             H[j, i] = Symbolics.expand_derivatives(Symbolics.Differential(vars_A[i])(first_derivs[j]))
+        end
+        #Take out the trace
+        # compute the g-trace 
+        T = - H[j,n+l_ind(1,1,n)]
+        for k=2:n
+            T = T + H[j,n+l_ind(k,k,n)]
+        end
+        #substract from vector 
+        H[j,n+l_ind(1,1,n)] = H[j,n+l_ind(1,1,n)] + T/n
+        for k=2:n
+            H[j,n+l_ind(k,k,n)] = H[j,n+l_ind(k,k,n)] - T/n
+        end
+        for k=1:n
+            for l=1:k
+                H[j,n+l_ind(k,l,n)] = H[j,n+l_ind(k,l,n)]*dd(k,l)
+            end
         end
     end
     H
 end
 
-function χ0AB(O, vars_A; simplify=false)
+function χ0AB(O, vars_A; simplify=true)
     #vars_0 = map(Symbolics.value, vars_0)
     vars_A = map(Symbolics.value, vars_A)
     first_derivs = map(Symbolics.value, vec(Symbolics.jacobian([Symbolics.values(O)], vars_A, simplify=simplify)))
     m = length(vars_A) #L
+    n = get_dim(m)
     H = Array{Num, 2}(undef,(m, m))
     H0 = Array{Num, 2}(undef,(m, m))
     fill!(H, 0)
-    for i=1:m
-        for j=1:i
-            H[j, i] = H[i,j] = Symbolics.expand_derivatives(Symbolics.Differential(vars_A[i])(first_derivs[j]))
+    #take out the trace 
+    T = - first_derivs[n+l_ind(1,1,n)]
+    for k=2:n
+        T = T + first_derivs[n+l_ind(k,k,n)]
+    end
+    first_derivs[n+l_ind(1,1,n)] = first_derivs[n+l_ind(1,1,n)] + T/n
+    for k=2:n
+        first_derivs[n+l_ind(k,k,n)] = first_derivs[n+l_ind(k,k,n)] - T/n
+    end
+    #take second derivative
+    for j=1:m
+        for i=1:m
+            H[j, i] = Symbolics.expand_derivatives(Symbolics.Differential(vars_A[i])(first_derivs[j]))
+        end
+        #take out the trace of the second index
+        T = - H[j,n+l_ind(1,1,n)]
+        for k=2:n
+            T = T + H[j,n+l_ind(k,k,n)]
+        end
+        H[j,n+l_ind(1,1,n)] = H[j,n+l_ind(1,1,n)] + T/n
+        for k=2:n
+            H[j,n+l_ind(k,k,n)] = H[j,n+l_ind(k,k,n)] - T/n
         end
     end
+    
+
     for i=1:m
         for j=1:i
             H0[j, i] = H0[i,j] = Symbolics.expand_derivatives(Symbolics.Differential(vars_A[1])(H[j,i]))
