@@ -444,7 +444,7 @@ function χaA(O, vars_a, vars_A; simplify=true)
         # correct derivative vector 
         for k=1:n
             for l=1:k
-                H[j,n+l_ind(k,l,n)] = H[j,n+l_ind(k,l,n)]*dd(k,l)
+                H[j,n+l_ind(k,l,n)] = Symbolics.simplify(H[j,n+l_ind(k,l,n)]*dd(k,l))
             end
         end
     end
@@ -469,9 +469,9 @@ function χ0AB(O, vars_A; simplify=true)
     for k=2:n
         T = T + first_derivs[n+l_ind(k,k,n)]
     end
-    first_derivs[n+l_ind(1,1,n)] = first_derivs[n+l_ind(1,1,n)] + T/n
+    first_derivs[n+l_ind(1,1,n)] = Symbolics.simplify(first_derivs[n+l_ind(1,1,n)] + T/n)
     for k=2:n
-        first_derivs[n+l_ind(k,k,n)] = first_derivs[n+l_ind(k,k,n)] - T/n
+        first_derivs[n+l_ind(k,k,n)] = Symbolics.simplify(first_derivs[n+l_ind(k,k,n)] - T/n)
     end
     #correct derivative vector 
     for k=1:n
@@ -489,9 +489,9 @@ function χ0AB(O, vars_A; simplify=true)
         for k=2:n
             T = T + H[j,n+l_ind(k,k,n)]
         end
-        H[j,n+l_ind(1,1,n)] = H[j,n+l_ind(1,1,n)] + T/n
+        H[j,n+l_ind(1,1,n)] = Symbolics.simplify(H[j,n+l_ind(1,1,n)] + T//n)
         for k=2:n
-            H[j,n+l_ind(k,k,n)] = H[j,n+l_ind(k,k,n)] - T/n
+            H[j,n+l_ind(k,k,n)] = Symbolics.simplify(H[j,n+l_ind(k,k,n)] - T//n)
         end
         # correct derivative vector 
         for k=1:n
@@ -504,7 +504,7 @@ function χ0AB(O, vars_A; simplify=true)
 
     for i=1:m
         for j=1:i
-            H0[j, i] = H0[i,j] = Symbolics.expand_derivatives(Symbolics.Differential(vars_A[1])(H[j,i]))
+            H0[j, i] = H0[i,j] = Symbolics.simplify(Symbolics.expand_derivatives(Symbolics.Differential(vars_A[1])(H[j,i])))
         end
     end
     H0
@@ -513,28 +513,28 @@ end
 function χaAB(O, vars_A; simplify=true)
     #vars_0 = map(Symbolics.value, vars_0)
     vars_A = map(Symbolics.value, vars_A)
+    # take first derivative 
     first_derivs = map(Symbolics.value, vec(Symbolics.jacobian([Symbolics.values(O)], vars_A, simplify=simplify)))
+    # take out the trace 
     m = length(vars_A) #L
     n = get_dim(m)
-    H = Array{Num, 2}(undef,(m, m))
-    Ha = Array{Num, 3}(undef,(m, m, n))
-    fill!(H, 0)
-    #take out the trace 
     T = - first_derivs[n+l_ind(1,1,n)]
     for k=2:n
         T = T + first_derivs[n+l_ind(k,k,n)]
     end
-    first_derivs[n+l_ind(1,1,n)] = first_derivs[n+l_ind(1,1,n)] + T/n
+    first_derivs[n+l_ind(1,1,n)] = Symbolics.simplify(first_derivs[n+l_ind(1,1,n)] + T/n)
     for k=2:n
-        first_derivs[n+l_ind(k,k,n)] = first_derivs[n+l_ind(k,k,n)] - T/n
+        first_derivs[n+l_ind(k,k,n)] = Symbolics.simplify(first_derivs[n+l_ind(k,k,n)] - T/n)
     end
-    #correct derivative vector 
+    #correct derivative vector (divide by two all non diagonal terms of the matrix part)
     for k=1:n
         for l=1:k
             first_derivs[n+l_ind(k,l,n)] = first_derivs[n+l_ind(k,l,n)]*dd(k,l)
         end
     end
     #take second derivative
+    H = Array{Num, 2}(undef,(m, m))
+    fill!(H, 0)
     for j=1:m
         for i=1:m
             H[j, i] = Symbolics.expand_derivatives(Symbolics.Differential(vars_A[i])(first_derivs[j]))
@@ -544,9 +544,9 @@ function χaAB(O, vars_A; simplify=true)
         for k=2:n
             T = T + H[j,n+l_ind(k,k,n)]
         end
-        H[j,n+l_ind(1,1,n)] = H[j,n+l_ind(1,1,n)] + T/n
+        H[j,n+l_ind(1,1,n)] = Symbolics.simplify(H[j,n+l_ind(1,1,n)] + T/n)
         for k=2:n
-            H[j,n+l_ind(k,k,n)] = H[j,n+l_ind(k,k,n)] - T/n
+            H[j,n+l_ind(k,k,n)] = Symbolics.simplify(H[j,n+l_ind(k,k,n)] - T/n)
         end
         # correct derivative vector 
         for k=1:n
@@ -555,11 +555,12 @@ function χaAB(O, vars_A; simplify=true)
             end
         end
     end
-    
+    #take third derivative (only with respect to the vectorial part of variables)
+    Ha = Array{Num, 3}(undef,(m, m, n))
     for k in 1:n
         for i=1:m
             for j=1:i
-                Ha[j, i, k] = Ha[i, j, k] = Symbolics.expand_derivatives(Symbolics.Differential(vars_A[k])(H[j,i]))
+                Ha[j, i, k] = Ha[i, j, k] = Symbolics.simplify(Symbolics.expand_derivatives(Symbolics.Differential(vars_A[k])(H[j,i])))
             end
         end
     end
