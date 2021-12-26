@@ -319,3 +319,128 @@ function mp5!(dv, v, par, t) # j is the grid position
     end
     
 end
+
+
+#====================WENOZ====================#
+
+function createWENOZvectors(N_FIELDS)
+    F_Mm3 = Array{Float64}(undef, N_FIELDS)
+    F_Mm2 = copy(F_Mm3)
+    F_Mm1 = copy(F_Mm3)
+    F_M   = copy(F_Mm3)
+    F_Mp1 = copy(F_Mm3)
+    F_Mp2 = copy(F_Mm3)
+    F_Mp3 = copy(F_Mm3)
+    F_Pm3 = copy(F_Mm3)
+    F_Pm2 = copy(F_Mm3)
+    F_Pm1 = copy(F_Mm3)
+    F_P   = copy(F_Mm3)
+    F_Pp1 = copy(F_Mm3)
+    F_Pp2 = copy(F_Mm3)
+    F_Pp3 = copy(F_Mm3)
+    F_LP  = copy(F_Mm3)
+    F_LM  = copy(F_Mm3)
+    F_RP  = copy(F_Mm3)
+    F_RM  = copy(F_Mm3)
+    H_m   = copy(F_Mm3)
+    H_p   = copy(F_Mm3)
+    sourcevec = copy(F_Mm3)
+    
+    return (F_Mm3, F_Mm2, F_Mm1, F_M, F_Mp1, F_Mp2, F_Mp3, F_Pm3, F_Pm2, F_Pm1, F_P, F_Pp1, F_Pp2, F_Pp3, F_LP, F_LM, F_RP, F_RM, H_m, H_p, sourcevec)
+end
+
+function WENOZreconstruction!(Vl, Vjmm, Vjm, Vj, Vjp, Vjpp, N_Fields)
+    B1 = 1.0833333333333333333  #13/12
+    B2 = 0.1666666666666666666  #1/6
+    
+    eps = 1e-40
+
+    for i in 1:N_Fields
+        Q0 = 2.0*Vj[i] +5.0*Vjp[i] - 1.0*Vjpp[i]
+        Q1 = -Vjm[i] + 5.0*Vj[i] + 2.0*Vjp[i]
+        Q2 = 2.0*Vjmm[i] - 7.0*Vjm[i] + 11* Vj[i]
+
+
+        β0 =  B1*(Vj[i] - 2*Vjp[i] + Vjpp[i])^2 + 0.25*(3*Vj[i] - 4*Vjp[i]+ Vjpp[i])^2
+        β1 =  B1*(Vjm[i] - 2*Vj[i] + Vjp[i])^2 + 0.25*(Vjm[i] - Vjp[i])^2
+        β2 =  B1*(Vjmm[i] - 2*Vjm[i] + Vj[i])^2 + 0.25*(Vjmm[i] - 4*Vjm[i]+ 3*Vj[i])^2
+
+
+        τ5 = abs(β2 - β0)
+
+        α0 = 0.3*(1.0 + (τ5/(β0 + eps))^2)
+        α1 = 0.6*(1.0 + (τ5/(β1 + eps))^2)
+        α2 = 0.1*(1.0 + (τ5/(β2 + eps))^2)
+
+        alphasum = (α0 + α1 + α2)
+
+        Vl[i] = (α0*Q0 + α1*Q1 + α2*Q2)*B2/alphasum
+    end
+end 
+
+function wenoz!(dfields, fields, par, t) # j is the grid position
+    #asumimos u unidimensional por ahora
+    par_eq, par_source, h, N, N_Fields, Fx!, source!, Speed_max, auxvecs = par
+    F_Mm3, F_Mm2, F_Mm1, F_M, F_Mp1, F_Mp2, F_Mp3, F_Pm3, F_Pm2, F_Pm1, F_P, F_Pp1, F_Pp2, F_Pp3, F_LP, F_LM, F_RP, F_RM, H_m, H_p, sourcevec = auxvecs
+    
+    #nota: f minuscula o u se usa para hablar de campos, F mayúscula para hablar de Flujos.
+    
+    for idx in 1:N
+        #first we defined shifted indices
+        idxm3 = mod(((idx-3) - 1),N) + 1
+        idxm2 = mod(((idx-2) - 1),N) + 1
+        idxm1 = mod(((idx-1) - 1),N) + 1
+        idxp1 = mod(((idx+1) - 1),N) + 1
+        idxp2 = mod(((idx+2) - 1),N) + 1
+        idxp3 = mod(((idx+3) - 1),N) + 1
+        
+    
+        um3 = @view fields[idxm3,:]
+        um2 = @view fields[idxm2,:]
+        um1 = @view fields[idxm1,:]
+        u   = @view fields[idx,:]
+        up1 = @view fields[idxp1,:]
+        up2 = @view fields[idxp2,:]
+        up3 = @view fields[idxp3,:]
+        
+        S_MAX = max(Speed_max(up3, par_eq), Speed_max(um3, par_eq), 
+            Speed_max(up2, par_eq), Speed_max(um2, par_eq), Speed_max(up1, par_eq), 
+            Speed_max(um1, par_eq), Speed_max(u, par_eq)) #maximum speed
+        
+        Fx!(F_Pm3, um3, par_eq)
+        Fx!(F_Pm2, um2, par_eq)
+        Fx!(F_Pm1, um1, par_eq)
+        Fx!(F_P, u, par_eq)
+        Fx!(F_Pp1, up1, par_eq)
+        Fx!(F_Pp2, up2, par_eq)
+        Fx!(F_Pp3, up3, par_eq)
+        
+        
+        @. F_Mm3 = 0.5 * (F_Pm3 - S_MAX * um3)
+        @. F_Mm2 = 0.5 * (F_Pm2 - S_MAX * um2)
+        @. F_Mm1 = 0.5 * (F_Pm1 - S_MAX * um1)
+        @. F_M   = 0.5 * (F_P   - S_MAX * u)
+        @. F_Mp1 = 0.5 * (F_Pp1 - S_MAX * up1)
+        @. F_Mp2 = 0.5 * (F_Pp2 - S_MAX * up2)
+        @. F_Mp3 = 0.5 * (F_Pp3 - S_MAX * up3)
+        @. F_Pm3 = 0.5 * (F_Pm3 + S_MAX * um3)
+        @. F_Pm2 = 0.5 * (F_Pm2 + S_MAX * um2)
+        @. F_Pm1 = 0.5 * (F_Pm1 + S_MAX * um1)
+        @. F_P   = 0.5 * (F_P   + S_MAX * u)
+        @. F_Pp1 = 0.5 * (F_Pp1 + S_MAX * up1)
+        @. F_Pp2 = 0.5 * (F_Pp2 + S_MAX * up2)
+        @. F_Pp3 = 0.5 * (F_Pp3 + S_MAX * up3)
+        WENOZreconstruction!(F_RM, F_Mp2, F_Mp1,  F_M,  F_Mm1, F_Mm2, N_Fields)
+        WENOZreconstruction!(F_LM, F_Pm3, F_Pm2, F_Pm1, F_P,  F_Pp1, N_Fields)
+        WENOZreconstruction!(F_LP, F_Pm2, F_Pm1,  F_P,  F_Pp1, F_Pp2, N_Fields)
+        WENOZreconstruction!(F_RP, F_Mp3, F_Mp2, F_Mp1, F_M,  F_Mm1, N_Fields)
+        
+        @. H_p = F_LP + F_RP
+        @. H_m = F_LM + F_RM
+
+        source!(sourcevec, u, t, par_source)
+        
+        @. dfields[idx, :] = -h*(H_p - H_m) + sourcevec
+        
+    end
+end
