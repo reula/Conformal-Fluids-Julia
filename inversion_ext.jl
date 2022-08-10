@@ -159,7 +159,13 @@ end
 
 @variables f[1:5], c[1:5], p[1:3], r[1:5]
 
-JS_alt = Symbolics.jacobian(f2c!(r,f,c,p),f);
+
+ff = Symbolics.scalarize(f)
+cc = Symbolics.scalarize(c)
+pp = Symbolics.scalarize(p)
+rr = Symbolics.scalarize(r)
+
+JS_alt = Symbolics.jacobian(f2c!(rr,ff,cc,pp),ff);
 J_exp_alt = Symbolics.build_function(JS_alt, r, f, c, p);
 Jf2c = eval(J_exp_alt[1]);
 
@@ -180,8 +186,8 @@ function flu_to_abs(flu)
     return [-γ/T; γ*v/T; 1.0*(ν*T^2*(4γ^2 - 1)/3-2r1*v*γ*T+t11*v^2); -1.0*(4/3*γ^2*v*ν*T^2-r1*γ*T*(1 + v^2)+t11*v); 1.0*((4*γ^2*v^2 + 1)/3*ν*T^2-2r1*v*γ*T+t11)]
 end
 
-Jf2a = Symbolics.jacobian(flu_to_abs(f),f);
-Jf2a_exp = Symbolics.build_function(Jf2a, f);
+Jf2a = Symbolics.jacobian(flu_to_abs(ff),ff);
+Jf2a_exp = Symbolics.build_function(Jf2a, ff);
 Jf2a_exp1 = eval(Jf2a_exp[1]);
 
 S = [1 0 0 0 0 ;
