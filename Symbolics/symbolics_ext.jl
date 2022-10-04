@@ -299,7 +299,9 @@ end
 #Φ_vt(ζ_v,ζ_t, [1.,1.,1.])#, ζ_t, [1.;1;1])
 #Φ_v(ζ, [1.,1.,1.])
 #ζ_v
-
+"""
+This is not completed
+"""
 function Φ(ζ,p)
     #χ = zeros(3)
     χs, gs = p
@@ -416,7 +418,8 @@ function tau2(v)
 end
 
 """
-takes a derivative with respect to a short vector and a long vector. Takes out the trace and also corrects the derivative vector.
+takes a derivative with respect to a short vector and a long vector. 
+Takes out the trace and also corrects the derivative vector.
 """
 function χaA(O, vars_a, vars_A; simplify=true)
     vars_a = map(Symbolics.value, vars_a)
